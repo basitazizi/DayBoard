@@ -6,7 +6,9 @@ import { formatTime } from "./date-utils";
 import { seedData } from "./seed-data";
 import { supabase } from "./supabase";
 
-const STORAGE_KEY = "dayboard.local.v2";
+export const DAYBOARD_STORAGE_KEY = "dayboard.local.v2";
+export const LEGACY_DAYBOARD_STORAGE_KEYS = ["dayboard.local.v1"];
+export const DAYBOARD_LOCAL_RESET_EVENT = "dayboard:local-reset";
 
 function isUuid(value?: string) {
   return Boolean(value?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i));
@@ -27,7 +29,7 @@ async function insertForCurrentUser(table: string, payload: Record<string, unkno
 
 function readStoredData(): DayBoardData {
   if (typeof window === "undefined") return seedData;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = window.localStorage.getItem(DAYBOARD_STORAGE_KEY);
   if (!raw) return seedData;
 
   try {
@@ -56,19 +58,29 @@ export function useDayBoardData() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    window.localStorage.setItem(DAYBOARD_STORAGE_KEY, JSON.stringify(data));
     setLastSynced(new Date());
   }, [data, hydrated]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) return;
+      if (event.key !== DAYBOARD_STORAGE_KEY) return;
       setData(readStoredData());
       setLastSynced(new Date());
     };
 
+    const onLocalReset = () => {
+      setData(seedData);
+      setLastSynced(new Date());
+    };
+
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener(DAYBOARD_LOCAL_RESET_EVENT, onLocalReset);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(DAYBOARD_LOCAL_RESET_EVENT, onLocalReset);
+    };
   }, []);
 
   return useMemo(
