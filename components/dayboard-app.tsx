@@ -312,17 +312,15 @@ function MobileDashboardHeader({
   return (
     <header className="block border-b border-[#e5e5e5] bg-white lg:hidden">
       <div className="flex h-13 items-center justify-between px-4">
-        <button aria-label="Open menu">
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="h-8 w-16" aria-hidden="true" />
         <div className="text-base font-semibold">Dashboard</div>
         {auth.user ? (
           <Link href="/settings" className="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-black text-white" aria-label="Profile">
             <User className="h-4 w-4" />
           </Link>
         ) : (
-          <Link href="/login" className="rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white">
-            Login
+          <Link href="/login" className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white" style={{ color: "#ffffff" }}>
+            Sign In
           </Link>
         )}
       </div>
