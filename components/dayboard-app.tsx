@@ -151,7 +151,7 @@ function DashboardScreen({
       <DashboardHeader data={data} auth={auth} now={now} lastSynced={lastSynced} displayMode={displayMode} />
       <MobileDashboardHeader data={data} auth={auth} now={now} onQuickAdd={onQuickAdd} />
 
-      <section className="mobile-safe-bottom grid flex-1 grid-cols-1 gap-4 px-5 py-4 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
+      <section className="mobile-safe-bottom grid flex-1 grid-cols-1 gap-3 px-3 py-3 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
         <TodayCard data={data} now={now} />
         <TasksCard store={store} now={now} />
         <UpcomingCard data={data} />
@@ -311,44 +311,44 @@ function MobileDashboardHeader({
 
   return (
     <header className="block border-b border-[#e5e5e5] bg-white lg:hidden">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-13 items-center justify-between px-4">
         <button aria-label="Open menu">
-          <Menu className="h-7 w-7" />
+          <Menu className="h-5 w-5" />
         </button>
-        <div className="text-xl font-semibold">Dashboard</div>
+        <div className="text-base font-semibold">Dashboard</div>
         {auth.user ? (
-          <Link href="/settings" className="flex h-9 w-9 items-center justify-center rounded-full border border-black bg-black text-white" aria-label="Profile">
-            <User className="h-5 w-5" />
+          <Link href="/settings" className="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-black text-white" aria-label="Profile">
+            <User className="h-4 w-4" />
           </Link>
         ) : (
-          <Link href="/login" className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white">
+          <Link href="/login" className="rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white">
             Login
           </Link>
         )}
       </div>
-      <div className="px-6 py-8">
+      <div className="px-4 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 text-3xl font-semibold leading-tight">
+            <div className="flex items-center gap-2 text-2xl font-semibold leading-tight">
               <span>
                 {greeting.greeting}, {displayName}
               </span>
-              <Sun className="h-8 w-8 shrink-0" strokeWidth={1.8} />
+              <Sun className="h-6 w-6 shrink-0" strokeWidth={1.8} />
             </div>
-            <div className="mt-3 text-xl text-[#666]">{formatMobileDate(now, data.timezone)}</div>
+            <div className="mt-2 text-base text-[#666]">{formatMobileDate(now, data.timezone)}</div>
           </div>
           <button
             onClick={onQuickAdd}
-            className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] min-[420px]:flex"
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] min-[420px]:flex"
             aria-label="Add item"
           >
-            <Plus className="h-7 w-7" />
+            <Plus className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-6 ml-auto flex w-fit items-center gap-4 rounded-xl border border-[#e0e0e0] px-5 py-4">
-          <Sun className="h-10 w-10" strokeWidth={1.7} />
-          <div className="text-4xl font-semibold">72°</div>
-          <div className="text-base text-[#333]">Sunny</div>
+        <div className="mt-4 ml-auto flex w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3">
+          <Sun className="h-7 w-7" strokeWidth={1.7} />
+          <div className="text-2xl font-semibold">72°</div>
+          <div className="text-sm text-[#333]">Sunny</div>
         </div>
       </div>
     </header>
@@ -358,12 +358,12 @@ function MobileDashboardHeader({
 function CardHeader({ icon, title, href }: { icon: ReactNode; title: string; href?: string }) {
   return (
     <div className="mb-5 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 lg:gap-5">
         {icon}
-        <h2 className="text-xl font-semibold tracking-normal lg:text-lg xl:text-xl">{title}</h2>
+        <h2 className="text-base font-semibold tracking-normal lg:text-lg xl:text-xl">{title}</h2>
       </div>
       {href ? (
-        <Link href={href} className="text-base font-medium lg:text-sm xl:text-base">
+        <Link href={href} className="text-sm font-medium lg:text-sm xl:text-base">
           View all
         </Link>
       ) : null}
@@ -376,8 +376,8 @@ function TodayCard({ data, now }: { data: DayBoardData; now: Date }) {
   const events = getEventsForDate(data.events, today);
 
   return (
-    <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<CalendarDays className="h-7 w-7" />} title="TODAY" href="/calendar" />
+    <article className="card flex min-h-[240px] flex-col overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<CalendarDays className="h-5 w-5 lg:h-7 lg:w-7" />} title="TODAY" href="/calendar" />
       <div className="flex-1 space-y-0">
         {events.length === 0 ? (
           <EmptyState>Nothing scheduled today.</EmptyState>
@@ -387,15 +387,15 @@ function TodayCard({ data, now }: { data: DayBoardData; now: Date }) {
             const duration = minutesFromTime(event.endTime) - minutesFromTime(event.startTime);
             return (
               <div key={event.id} className={cn("grid grid-cols-[88px_1px_1fr] gap-5", status === "finished" && "opacity-45")}>
-                <div className="py-3 text-lg font-medium lg:py-2 lg:text-base xl:text-lg">{formatTime(event.startTime)}</div>
+                <div className="py-2 text-sm font-medium lg:py-2 lg:text-base xl:text-lg">{formatTime(event.startTime)}</div>
                 <div className="bg-[#e5e5e5]" />
-                <div className={cn("border-b border-[#e5e5e5] py-3 lg:py-2", status === "active" && "rounded-lg border border-black px-3")}>
+                <div className={cn("border-b border-[#e5e5e5] py-2 lg:py-2", status === "active" && "rounded-lg border border-black px-3")}>
                   <div className="flex items-center gap-4">
                     <span className="text-[#111]">{eventIconMap[event.category]}</span>
                     <div>
                       {status === "active" ? <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em]">● Now</div> : null}
-                      <div className="text-lg font-medium leading-tight">{event.title}</div>
-                      <div className="mt-1 text-sm text-[#444]">{formatDuration(duration)}</div>
+                      <div className="text-base font-medium leading-tight">{event.title}</div>
+                      <div className="mt-0.5 text-xs text-[#444]">{formatDuration(duration)}</div>
                     </div>
                   </div>
                 </div>
@@ -415,8 +415,8 @@ function TasksCard({ store, now }: { store: ReturnType<typeof useDayBoardData>; 
   const total = store.data.tasks.length;
 
   return (
-    <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<CheckSquare className="h-7 w-7" />} title="TASKS" href="/tasks" />
+    <article className="card flex min-h-[240px] flex-col overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<CheckSquare className="h-5 w-5 lg:h-7 lg:w-7" />} title="TASKS" href="/tasks" />
       <div className="flex-1">
         {tasks.length === 0 ? (
           <EmptyState>Add your first task with the + button.</EmptyState>
@@ -427,7 +427,7 @@ function TasksCard({ store, now }: { store: ReturnType<typeof useDayBoardData>; 
         )}
       </div>
       <div className={cn(total === 0 && "hidden")}>
-        <div className="mt-2 text-lg lg:text-base">
+        <div className="mt-2 text-sm lg:text-base">
           {completed} / {total} completed
         </div>
         <div className="mt-2 h-1.5 rounded-full bg-[#e8e8e8]">
@@ -448,16 +448,16 @@ function TaskLine({ task, now, onToggle }: { task: Task; now: Date; onToggle: ()
   }[priority.displayStatus];
 
   return (
-    <div className="grid grid-cols-[24px_1fr_auto] items-center gap-4 border-b border-[#e5e5e5] py-3 last:border-b-0">
+    <div className="grid grid-cols-[20px_1fr_auto] items-center gap-3 border-b border-[#e5e5e5] py-2.5 last:border-b-0 lg:grid-cols-[24px_1fr_auto] lg:gap-4 lg:py-3">
       <button
         onClick={onToggle}
-        className={cn("flex h-5 w-5 items-center justify-center rounded-full border transition-colors", dotClass)}
+        className={cn("flex h-4 w-4 items-center justify-center rounded-full border transition-colors lg:h-5 lg:w-5", dotClass)}
         aria-label={`Toggle ${task.title}`}
       >
         {task.status === "completed" ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} /> : null}
       </button>
-      <div className={cn("min-w-0 text-lg lg:text-base xl:text-lg", task.status === "completed" && "text-[#555] line-through")}>{task.title}</div>
-      <div className="whitespace-nowrap text-sm text-[#555]">{task.status === "completed" ? "Completed" : task.dueDate ? getRelativeDayLabel(task.dueDate) : task.priority}</div>
+      <div className={cn("min-w-0 text-sm lg:text-base xl:text-lg", task.status === "completed" && "text-[#555] line-through")}>{task.title}</div>
+      <div className="whitespace-nowrap text-xs text-[#555] lg:text-sm">{task.status === "completed" ? "Completed" : task.dueDate ? getRelativeDayLabel(task.dueDate) : task.priority}</div>
     </div>
   );
 }
@@ -466,21 +466,21 @@ function UpcomingCard({ data }: { data: DayBoardData }) {
   const items = [...data.upcoming].sort((a, b) => b.importance - a.importance || a.date.localeCompare(b.date)).slice(0, 4);
 
   return (
-    <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<CalendarDays className="h-7 w-7" />} title="UPCOMING" href="/calendar" />
+    <article className="card flex min-h-[240px] flex-col overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<CalendarDays className="h-5 w-5 lg:h-7 lg:w-7" />} title="UPCOMING" href="/calendar" />
       <div className="flex-1 space-y-3">
         {items.length === 0 ? <EmptyState>Assignments, exams, and important dates will appear here.</EmptyState> : null}
         {items.map((item) => {
           const date = new Date(`${item.date}T12:00:00`);
           return (
-            <div key={item.id} className="grid grid-cols-[64px_1fr] gap-4 border-b border-[#e5e5e5] pb-3 lg:pb-2 last:border-b-0">
+            <div key={item.id} className="grid grid-cols-[52px_1fr] gap-3 border-b border-[#e5e5e5] pb-3 lg:grid-cols-[64px_1fr] lg:gap-4 lg:pb-2 last:border-b-0">
               <div className="rounded-lg border border-[#dddddd] px-2 py-2 text-center">
                 <div className="text-xs font-semibold uppercase">{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date)}</div>
-                <div className="text-3xl font-semibold leading-none">{date.getDate()}</div>
+                <div className="text-2xl font-semibold leading-none lg:text-3xl">{date.getDate()}</div>
               </div>
               <div className="pt-1">
-                <div className="text-lg font-medium">{item.title}</div>
-                <div className="mt-1 text-base text-[#555]">{item.timeLabel}</div>
+                <div className="text-base font-medium lg:text-lg">{item.title}</div>
+                <div className="mt-1 text-sm text-[#555] lg:text-base">{item.timeLabel}</div>
               </div>
             </div>
           );
@@ -493,21 +493,21 @@ function UpcomingCard({ data }: { data: DayBoardData }) {
 
 function HabitsCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
   return (
-    <article className="card min-h-[300px] overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<Target className="h-7 w-7" />} title="HABITS" href="/habits" />
+    <article className="card min-h-[240px] overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<Target className="h-5 w-5 lg:h-7 lg:w-7" />} title="HABITS" href="/habits" />
       <div>
         {store.data.habits.length === 0 ? <EmptyState>Add habits you want to track daily or weekly.</EmptyState> : null}
         {store.data.habits.slice(0, 5).map((habit) => (
           <button
             key={habit.id}
             onClick={() => store.toggleHabit(habit.id)}
-            className="grid w-full grid-cols-[1fr_auto] items-center gap-4 border-b border-[#e5e5e5] py-3 text-left last:border-b-0"
+            className="grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-[#e5e5e5] py-2.5 text-left last:border-b-0 lg:gap-4 lg:py-3"
           >
             <div className="flex min-w-0 items-center gap-4">
               {habitIconMap[habit.icon]}
               <div className="min-w-0">
-                <div className="text-lg font-medium leading-tight">{habit.name}</div>
-                <div className="mt-1 text-sm text-[#555]">{habit.streak} day streak</div>
+                <div className="text-sm font-medium leading-tight lg:text-lg">{habit.name}</div>
+                <div className="mt-0.5 text-xs text-[#555] lg:text-sm">{habit.streak} day streak</div>
               </div>
             </div>
             <WeekDots pattern={habit.weekPattern} />
@@ -520,9 +520,9 @@ function HabitsCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
 
 function WeekDots({ pattern }: { pattern: boolean[] }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 lg:gap-2">
       {pattern.map((complete, index) => (
-        <span key={index} className={cn("h-3.5 w-3.5 rounded-full border border-black", complete ? "bg-black" : "bg-white")} />
+        <span key={index} className={cn("h-2.5 w-2.5 rounded-full border border-black lg:h-3.5 lg:w-3.5", complete ? "bg-black" : "bg-white")} />
       ))}
     </div>
   );
@@ -536,8 +536,8 @@ function InsightsCard({ data }: { data: DayBoardData }) {
   const points = [25, 58, 44, 78, 43, 74, 35, 58, 66, 92, 73, 87];
 
   return (
-    <article className="card min-h-[300px] overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<BarChart3 className="h-7 w-7" />} title="INSIGHTS" href="/insights" />
+    <article className="card min-h-[240px] overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<BarChart3 className="h-5 w-5 lg:h-7 lg:w-7" />} title="INSIGHTS" href="/insights" />
       {hasActivity ? (
         <>
           <MetricRow label="Tasks Completed" value={`${completed} / ${total}`} />
@@ -557,17 +557,17 @@ function NotesCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
   const note = [...store.data.notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt))[0];
 
   return (
-    <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<FileText className="h-7 w-7" />} title="NOTES" href="/notes" />
+    <article className="card flex min-h-[240px] flex-col overflow-hidden p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<FileText className="h-5 w-5 lg:h-7 lg:w-7" />} title="NOTES" href="/notes" />
       {note ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="text-5xl font-semibold leading-none">“</div>
-          <p className="mt-2 max-w-[28rem] whitespace-pre-line text-xl leading-relaxed lg:text-lg xl:text-xl">{note.content}</p>
+          <div className="text-3xl font-semibold leading-none lg:text-5xl">“</div>
+          <p className="mt-2 max-w-[28rem] whitespace-pre-line text-base leading-relaxed lg:text-lg xl:text-xl">{note.content}</p>
         </div>
       ) : (
         <EmptyState>Add your first note.</EmptyState>
       )}
-      <div className="mt-5 border-t border-[#e5e5e5] pt-5 text-center text-lg">
+      <div className="mt-4 border-t border-[#e5e5e5] pt-4 text-center text-sm lg:text-lg">
         <Link href="/notes" className="inline-flex items-center gap-2">
           <Plus className="h-5 w-5" /> New note
         </Link>
@@ -578,7 +578,7 @@ function NotesCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
 
 function CardFooter({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <div className="mt-4 text-right text-lg lg:text-base">
+    <div className="mt-3 text-right text-sm lg:text-base">
       <Link href={href} className="inline-flex items-center gap-3 font-medium">
         {children}
         <ChevronRight className="h-5 w-5" />
@@ -588,12 +588,12 @@ function CardFooter({ href, children }: { href: string; children: ReactNode }) {
 }
 
 function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="flex h-full min-h-[120px] items-center justify-center rounded-lg bg-[#fafafa] text-center text-[#666]">{children}</div>;
+  return <div className="flex h-full min-h-[96px] items-center justify-center rounded-lg bg-[#fafafa] px-3 text-center text-sm text-[#666] lg:min-h-[120px] lg:text-base">{children}</div>;
 }
 
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-[#e5e5e5] py-1.5 text-base">
+    <div className="flex items-center justify-between border-b border-[#e5e5e5] py-1.5 text-sm lg:text-base">
       <span>{label}</span>
       <span className="font-medium">{value}</span>
     </div>
@@ -657,22 +657,22 @@ function MobileBottomNav({ onQuickAdd }: { onQuickAdd: () => void }) {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e5e5] bg-white/95 px-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e5e5] bg-white/95 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
       <button
         onClick={onQuickAdd}
-        className="absolute left-1/2 top-0 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-white shadow-[0_0_0_1px_#d9d9d9]"
+        className="absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-white shadow-[0_0_0_1px_#d9d9d9]"
         aria-label="Add new"
       >
-        <Plus className="h-10 w-10" />
+        <Plus className="h-7 w-7" />
       </button>
       <div className="grid grid-cols-5 items-end">
         {mobileItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-1 text-[#555]", index === 2 && "pt-8", isActive && "text-black")}>
-              <Icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-sm font-medium">{item.label}</span>
+            <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-0.5 text-[#555]", index === 2 && "pt-6", isActive && "text-black")}>
+              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-xs font-medium">{item.label}</span>
               <span className={cn("mt-1 h-1 w-8 rounded-full", isActive ? "bg-black" : "bg-transparent")} />
             </Link>
           );
@@ -699,24 +699,24 @@ function InnerPageFrame({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[#e5e5e5] bg-white px-5 py-4 lg:px-8">
-        <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[#e5e5e5] bg-white px-4 py-3 lg:px-8 lg:py-4">
+        <div className="flex items-center gap-3 lg:gap-4">
           <Link href="/" className="lg:hidden" aria-label="Back to dashboard">
-            <ChevronLeft className="h-7 w-7" />
+            <ChevronLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-semibold lg:text-3xl">{title}</h1>
+          <h1 className="text-xl font-semibold lg:text-3xl">{title}</h1>
         </div>
         <div className="flex items-center gap-3">
           <button className="hidden h-11 items-center gap-2 rounded-lg border border-[#e0e0e0] px-4 text-sm text-[#333] lg:flex">
             <Wifi className="h-4 w-4" /> Local sync
           </button>
-          <button onClick={onQuickAdd} className="flex h-11 items-center gap-2 rounded-lg bg-black px-4 font-medium text-white">
-            <Plus className="h-5 w-5" /> <span className="hidden sm:inline">Add</span>
+          <button onClick={onQuickAdd} className="flex h-9 items-center gap-2 rounded-lg bg-black px-3 text-sm font-medium text-white lg:h-11 lg:px-4 lg:text-base">
+            <Plus className="h-4 w-4 lg:h-5 lg:w-5" /> <span className="hidden sm:inline">Add</span>
           </button>
         </div>
       </header>
 
-      <section className="mobile-safe-bottom flex-1 px-5 py-5 lg:px-8">
+      <section className="mobile-safe-bottom flex-1 px-3 py-3 lg:px-8 lg:py-5">
         {screen === "calendar" ? <CalendarPage store={store} now={now} /> : null}
         {screen === "tasks" ? <TasksPage store={store} now={now} /> : null}
         {screen === "school" ? <SchoolPage data={store.data} /> : null}
@@ -1236,7 +1236,7 @@ function SettingsSection({ title, children }: { title: string; children: ReactNo
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-[#666]">{label}</span>
+      <span className="text-xs font-medium text-[#666] lg:text-sm">{label}</span>
       <input value={value} readOnly className="mt-1 w-full rounded-lg border border-[#dcdcdc] px-3 py-3 outline-none" />
     </label>
   );
@@ -1258,7 +1258,7 @@ function SegmentedControl({ value, options, onChange }: { value: string; options
         <button
           key={optionValue}
           onClick={() => onChange(optionValue)}
-          className={cn("whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium text-[#555]", value === optionValue && "bg-black text-white")}
+          className={cn("whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-[#555] lg:px-4 lg:py-2 lg:text-sm", value === optionValue && "bg-black text-white")}
         >
           {label}
         </button>
@@ -1278,9 +1278,9 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-50 bg-black/20" role="dialog" aria-modal="true">
-      <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-5 shadow-2xl lg:left-1/2 lg:top-1/2 lg:bottom-auto lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-xl">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
+      <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl lg:left-1/2 lg:top-1/2 lg:bottom-auto lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-xl lg:p-5">
+        <div className="mb-4 flex items-center justify-between lg:mb-5">
+          <h2 className="text-lg font-semibold lg:text-xl">
             {kind === "menu"
               ? "Add New"
               : kind === "task"
@@ -1295,8 +1295,8 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
                         ? "Add Exam"
                         : "Add Note"}
           </h2>
-          <button onClick={onClose} className="rounded-lg border border-[#dcdcdc] p-2" aria-label="Close">
-            <X className="h-5 w-5" />
+          <button onClick={onClose} className="rounded-lg border border-[#dcdcdc] p-1.5 lg:p-2" aria-label="Close">
+            <X className="h-4 w-4 lg:h-5 lg:w-5" />
           </button>
         </div>
         {kind === "menu" ? (
@@ -1322,11 +1322,11 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
 
 function QuickOption({ icon, title, detail, onClick, disabled }: { icon: ReactNode; title: string; detail: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button disabled={disabled} onClick={onClick} className="flex items-center gap-4 rounded-lg border border-[#e0e0e0] p-4 text-left disabled:opacity-45">
-      <span className="flex h-10 w-10 items-center justify-center">{icon}</span>
+    <button disabled={disabled} onClick={onClick} className="flex items-center gap-3 rounded-lg border border-[#e0e0e0] p-3 text-left disabled:opacity-45 lg:gap-4 lg:p-4">
+      <span className="flex h-8 w-8 items-center justify-center [&_svg]:h-5 [&_svg]:w-5 lg:h-10 lg:w-10 lg:[&_svg]:h-6 lg:[&_svg]:w-6">{icon}</span>
       <span>
-        <span className="block font-semibold">{title}</span>
-        <span className="block text-sm text-[#666]">{detail}</span>
+        <span className="block text-sm font-semibold lg:text-base">{title}</span>
+        <span className="block text-xs text-[#666] lg:text-sm">{detail}</span>
       </span>
     </button>
   );
@@ -1366,7 +1366,7 @@ function TaskForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
       <Select label="Priority" value={priority} onChange={(value) => setPriority(value as TaskPriority)} options={["low", "medium", "high", "critical"]} />
       <TextInput label="Estimate Minutes" value={String(estimatedMinutes)} onChange={(value) => setEstimatedMinutes(Number(value))} type="number" />
       <TextInput label="Category" value={category} onChange={setCategory} />
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save</button>
     </form>
   );
 }
@@ -1415,7 +1415,7 @@ function EventForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData
           <div className="mt-1">{title || "This event"} overlaps {conflict.title}. Press Save again to keep anyway.</div>
         </div>
       ) : null}
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save</button>
     </form>
   );
 }
@@ -1436,14 +1436,14 @@ function NoteForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
     <form onSubmit={submit} className="grid gap-3">
       <TextInput label="Title" value={title} onChange={setTitle} autoFocus />
       <label className="block">
-        <span className="text-sm font-medium text-[#666]">Content</span>
+        <span className="text-xs font-medium text-[#666] lg:text-sm">Content</span>
         <textarea value={content} onChange={(event) => setContent(event.target.value)} className="mt-1 min-h-28 w-full rounded-lg border border-[#dcdcdc] px-3 py-3 outline-none" />
       </label>
       <label className="flex items-center gap-3">
         <input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} className="h-5 w-5 accent-black" />
         Pin to Dashboard
       </label>
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save</button>
     </form>
   );
 }
@@ -1512,7 +1512,7 @@ function AssignmentForm({ store, onDone }: { store: ReturnType<typeof useDayBoar
         <input type="checkbox" checked={createTask} onChange={(event) => setCreateTask(event.target.checked)} className="h-5 w-5 accent-black" />
         Create task for this assignment
       </label>
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save Assignment</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save Assignment</button>
     </form>
   );
 }
@@ -1576,7 +1576,7 @@ function ExamForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
         <input type="checkbox" checked={createStudyTask} onChange={(event) => setCreateStudyTask(event.target.checked)} className="h-5 w-5 accent-black" />
         Create study task
       </label>
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save Exam</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save Exam</button>
     </form>
   );
 }
@@ -1610,7 +1610,7 @@ function HabitForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData
       <Select label="Schedule" value={scheduleType} onChange={setScheduleType} options={["daily", "scheduled", "weekly"]} labels={{ daily: "Every day", scheduled: "Specific days", weekly: "Times per week" }} />
       {scheduleType === "scheduled" ? <WeekdayPicker selected={targetDays} onChange={setTargetDays} /> : null}
       {scheduleType === "weekly" ? <TextInput label="Target Times Per Week" value={targetTimesPerWeek} onChange={setTargetTimesPerWeek} type="number" /> : null}
-      <button className="mt-2 rounded-lg bg-black px-4 py-3 font-semibold text-white">Save Habit</button>
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save Habit</button>
     </form>
   );
 }
@@ -1620,7 +1620,7 @@ function WeekdayPicker({ selected, onChange }: { selected: number[]; onChange: (
 
   return (
     <div>
-      <div className="text-sm font-medium text-[#666]">Target Days</div>
+      <div className="text-xs font-medium text-[#666] lg:text-sm">Target Days</div>
       <div className="mt-2 grid grid-cols-7 gap-2">
         {days.map((day, index) => {
           const active = selected.includes(index);
@@ -1629,7 +1629,7 @@ function WeekdayPicker({ selected, onChange }: { selected: number[]; onChange: (
               key={`${day}-${index}`}
               type="button"
               onClick={() => onChange(active ? selected.filter((item) => item !== index) : [...selected, index].sort())}
-              className={cn("h-11 rounded-lg border border-[#dcdcdc] font-semibold", active && "border-black bg-black text-white")}
+              className={cn("h-9 rounded-lg border border-[#dcdcdc] text-sm font-semibold lg:h-11 lg:text-base", active && "border-black bg-black text-white")}
             >
               {day}
             </button>
@@ -1655,8 +1655,8 @@ function TextInput({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-[#666]">{label}</span>
-      <input autoFocus={autoFocus} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-11 w-full rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black" />
+      <span className="text-xs font-medium text-[#666] lg:text-sm">{label}</span>
+      <input autoFocus={autoFocus} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#dcdcdc] px-3 text-sm outline-none focus:border-black lg:h-11 lg:text-base" />
     </label>
   );
 }
@@ -1676,8 +1676,8 @@ function Select({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-[#666]">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-11 w-full rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black">
+      <span className="text-xs font-medium text-[#666] lg:text-sm">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#dcdcdc] px-3 text-sm outline-none focus:border-black lg:h-11 lg:text-base">
         {options.map((option) => (
           <option key={option} value={option}>
             {labels?.[option] ?? option}
