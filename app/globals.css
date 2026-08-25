@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --muted: #666666;
+  --line: #e5e5e5;
+  --soft: #fafafa;
+  --danger: #ef4444;
+  --progress: #3b82f6;
+  --success: #16a34a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lcd-frame {
+  min-height: 100dvh;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    radial-gradient(circle at top left, rgba(0, 0, 0, 0.05), transparent 28%) border-box;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  transition: border-color 180ms ease;
+}
+
+.card:hover {
+  border-color: #bfbfbf;
+}
+
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cfcfcf transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 999px;
+}
+
+.mobile-safe-bottom {
+  padding-bottom: max(6.5rem, env(safe-area-inset-bottom));
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .lcd-dashboard {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
