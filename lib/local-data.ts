@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Assignment, CalendarEvent, DayBoardData, Exam, Habit, Note, Task } from "@/types/dayboard";
-import { formatTime } from "./date-utils";
+import type { Assignment, CalendarEvent, DayBoardData, Exam, Habit, HabitLog, Note, Task } from "@/types/dayboard";
+import { formatTime, getLocalDateKey } from "./date-utils";
 import { seedData } from "./seed-data";
+import { calculateHabitStreak, calculateHabitWeekPattern } from "./streaks";
 import { supabase } from "./supabase";
 
 export const DAYBOARD_AUTH_CHANGED_EVENT = "dayboard:auth-changed";
@@ -82,6 +83,14 @@ type DbHabit = {
   schedule_type: Habit["scheduleType"];
   target_days: number[] | null;
   target_times_per_week: number | null;
+};
+
+type DbHabitLog = {
+  id: string;
+  habit_id: string;
+  log_date: string;
+  completed: boolean | null;
+  completed_at: string | null;
 };
 
 type DbNote = {
@@ -193,6 +202,27 @@ function mapAssignment(row: DbAssignment): Assignment {
   };
 }
 
+function mapHabitLog(row: DbHabitLog): HabitLog {
+  return {
+    id: row.id,
+    habitId: row.habit_id,
+    date: row.log_date,
+    completed: row.completed ?? false,
+    completedAt: row.completed_at ?? undefined
+  };
+}
+
+function applyHabitLogState(habits: Habit[], logs: HabitLog[], timezone: string) {
+  const today = getLocalDateKey(new Date(), timezone);
+
+  return habits.map((habit) => ({
+    ...habit,
+    weekPattern: calculateHabitWeekPattern(habit, logs, today),
+    streak: calculateHabitStreak(habit, logs, today),
+    completedToday: logs.some((log) => log.habitId === habit.id && log.date === today && log.completed)
+  }));
+}
+
 function buildUpcoming(assignments: Assignment[], exams: Exam[]) {
   return [
     ...assignments
@@ -227,17 +257,18 @@ async function getCurrentUserId() {
 async function loadSupabaseData(userId: string | null): Promise<DayBoardData> {
   if (!userId) return seedData;
 
-  const [tasksResult, eventsResult, coursesResult, assignmentsResult, examsResult, habitsResult, notesResult] = await Promise.all([
+  const [tasksResult, eventsResult, coursesResult, assignmentsResult, examsResult, habitsResult, habitLogsResult, notesResult] = await Promise.all([
     supabase.from("tasks").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("events").select("*").eq("user_id", userId).order("event_date", { ascending: true }),
     supabase.from("courses").select("*").eq("user_id", userId).order("code", { ascending: true }),
     supabase.from("assignments").select("*").eq("user_id", userId).order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("exams").select("*").eq("user_id", userId).order("exam_date", { ascending: true }),
     supabase.from("habits").select("*").eq("user_id", userId).eq("is_active", true).order("created_at", { ascending: true }),
+    supabase.from("habit_logs").select("*").eq("user_id", userId).order("log_date", { ascending: false }),
     supabase.from("notes").select("*").eq("user_id", userId).order("updated_at", { ascending: false })
   ]);
 
-  for (const result of [tasksResult, eventsResult, coursesResult, assignmentsResult, examsResult, habitsResult, notesResult]) {
+  for (const result of [tasksResult, eventsResult, coursesResult, assignmentsResult, examsResult, habitsResult, habitLogsResult, notesResult]) {
     if (result.error) throw result.error;
   }
 
@@ -267,7 +298,8 @@ async function loadSupabaseData(userId: string | null): Promise<DayBoardData> {
     studyMinutesCompleted: exam.study_minutes_completed ?? 0,
     importanceScore: exam.importance_score ?? 0
   }));
-  const habits = ((habitsResult.data ?? []) as DbHabit[]).map((habit) => ({
+  const habitLogs = ((habitLogsResult.data ?? []) as DbHabitLog[]).map(mapHabitLog);
+  const habits = applyHabitLogState(((habitsResult.data ?? []) as DbHabit[]).map((habit) => ({
     id: habit.id,
     name: habit.name,
     icon: habitIconValue(habit.icon),
@@ -277,7 +309,7 @@ async function loadSupabaseData(userId: string | null): Promise<DayBoardData> {
     weekPattern: [false, false, false, false, false, false, false],
     streak: 0,
     completedToday: false
-  }));
+  })), habitLogs, seedData.timezone);
   const notes = ((notesResult.data ?? []) as DbNote[]).map((note) => ({
     id: note.id,
     title: note.title,
@@ -296,6 +328,7 @@ async function loadSupabaseData(userId: string | null): Promise<DayBoardData> {
     exams,
     habits,
     notes,
+    habitLogs,
     upcoming: buildUpcoming(assignments, exams)
   };
 }
@@ -351,6 +384,38 @@ export function useDayBoardData() {
       window.removeEventListener(DAYBOARD_AUTH_CHANGED_EVENT, onAuthChanged);
     };
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const tables = ["tasks", "events", "courses", "assignments", "exams", "habits", "habit_logs", "notes"];
+    const channel = supabase.channel(`dayboard-user-${userId}`);
+
+    for (const table of tables) {
+      channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table,
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          void refresh();
+        }
+      );
+    }
+
+    channel.subscribe((status, error) => {
+      if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && error) {
+        console.warn("Supabase realtime connection issue", error);
+      }
+    });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   return useMemo(
     () => ({
@@ -469,6 +534,57 @@ export function useDayBoardData() {
             ...current,
             events: current.events.map((item) => (item.id === optimisticEvent.id ? (savedEvent as CalendarEvent) : item))
           }));
+        });
+      },
+      updateEvent: (eventId: string, event: Omit<CalendarEvent, "id">) => {
+        setData((current) => ({
+          ...current,
+          events: current.events.map((item) => (item.id === eventId ? { ...event, id: eventId } : item))
+        }));
+
+        void getCurrentUserId().then((currentUserId) => {
+          if (!currentUserId) return;
+
+          void supabase
+            .from("events")
+            .update({
+              title: event.title,
+              event_date: event.date,
+              start_time: event.startTime,
+              end_time: event.endTime,
+              all_day: event.allDay ?? false,
+              category: event.category,
+              location: event.location,
+              description: event.description,
+              repeat_type: event.repeatType ?? "never",
+              repeat_days: event.repeatDays,
+              priority: event.priority,
+              status: "upcoming"
+            })
+            .eq("id", eventId)
+            .eq("user_id", currentUserId)
+            .then(({ error }) => {
+              if (error) console.warn("Could not update event in Supabase", error.message);
+            });
+        });
+      },
+      deleteEvent: (eventId: string) => {
+        setData((current) => ({
+          ...current,
+          events: current.events.filter((event) => event.id !== eventId)
+        }));
+
+        void getCurrentUserId().then((currentUserId) => {
+          if (!currentUserId) return;
+
+          void supabase
+            .from("events")
+            .delete()
+            .eq("id", eventId)
+            .eq("user_id", currentUserId)
+            .then(({ error }) => {
+              if (error) console.warn("Could not delete event in Supabase", error.message);
+            });
         });
       },
       addAssignment: (assignment: Omit<Assignment, "id" | "actualMinutes" | "status">) => {
@@ -611,20 +727,57 @@ export function useDayBoardData() {
         });
       },
       toggleHabit: (habitId: string) => {
-        setData((current) => ({
-          ...current,
-          habits: current.habits.map((habit: Habit) =>
-            habit.id === habitId
-              ? {
-                  ...habit,
-                  completedToday: !habit.completedToday,
-                  weekPattern: habit.weekPattern.map((done, index) =>
-                    index === new Date().getDay() ? !habit.completedToday : done
-                  )
-                }
-              : habit
-          )
-        }));
+        const today = getLocalDateKey(new Date(), data.timezone);
+        const habit = data.habits.find((item) => item.id === habitId);
+        if (!habit) return;
+
+        const existingLog = data.habitLogs.find((log) => log.habitId === habitId && log.date === today);
+        const nextCompleted = !(existingLog?.completed ?? false);
+        const optimisticLog: HabitLog = existingLog
+          ? {
+              ...existingLog,
+              completed: nextCompleted,
+              completedAt: nextCompleted ? new Date().toISOString() : undefined
+            }
+          : {
+              id: `habit-log-${crypto.randomUUID()}`,
+              habitId,
+              date: today,
+              completed: true,
+              completedAt: new Date().toISOString()
+            };
+
+        setData((current) => {
+          const habitLogs = existingLog
+            ? current.habitLogs.map((log) => (log.habitId === habitId && log.date === today ? optimisticLog : log))
+            : [optimisticLog, ...current.habitLogs];
+
+          return {
+            ...current,
+            habitLogs,
+            habits: applyHabitLogState(current.habits, habitLogs, current.timezone)
+          };
+        });
+
+        void getCurrentUserId().then((currentUserId) => {
+          if (!currentUserId) return;
+
+          void supabase
+            .from("habit_logs")
+            .upsert(
+              {
+                habit_id: habitId,
+                user_id: currentUserId,
+                log_date: today,
+                completed: nextCompleted,
+                completed_at: nextCompleted ? new Date().toISOString() : null
+              },
+              { onConflict: "habit_id,log_date" }
+            )
+            .then(({ error }) => {
+              if (error) console.warn("Could not update habit log in Supabase", error.message);
+            });
+        });
       },
       addNote: (note: Omit<Note, "id" | "updatedAt">) => {
         const optimisticNote = {

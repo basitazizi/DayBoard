@@ -75,6 +75,14 @@ export interface Habit {
   completedToday: boolean;
 }
 
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string;
+  completed: boolean;
+  completedAt?: string;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -130,6 +138,7 @@ export interface DayBoardData {
   courses: Course[];
   assignments: Assignment[];
   exams: Exam[];
+  habitLogs: HabitLog[];
 }
 
 export interface PriorityResult {

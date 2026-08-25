@@ -508,7 +508,12 @@ function HabitsCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
                 <div className="mt-0.5 text-xs text-[#555] lg:text-sm">{habit.streak} day streak</div>
               </div>
             </div>
-            <WeekDots pattern={habit.weekPattern} />
+            <div className="flex items-center gap-3">
+              <WeekDots pattern={habit.weekPattern} />
+              <span className={cn("flex h-6 w-6 items-center justify-center rounded-full border border-black", habit.completedToday && "bg-black text-white")}>
+                {habit.completedToday ? <Check className="h-4 w-4" /> : null}
+              </span>
+            </div>
           </button>
         ))}
       </div>
@@ -732,6 +737,7 @@ function InnerPageFrame({
 function CalendarPage({ store, now }: { store: ReturnType<typeof useDayBoardData>; now: Date }) {
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [view, setView] = useState<CalendarView>("month");
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const selectedEvents = getEventsForDate(store.data.events, selectedDate);
 
   return (
@@ -763,11 +769,12 @@ function CalendarPage({ store, now }: { store: ReturnType<typeof useDayBoardData
       {view === "month" ? (
         <div className="grid gap-5 lg:grid-cols-[1.55fr_0.95fr]">
           <MonthCalendar data={store.data} selectedDate={selectedDate} onSelect={setSelectedDate} />
-          <AgendaPanel dateKey={selectedDate} events={selectedEvents} />
+          <AgendaPanel dateKey={selectedDate} events={selectedEvents} onEventClick={setSelectedEvent} />
         </div>
       ) : null}
-      {view === "week" ? <WeekCalendar events={store.data.events} selectedDate={selectedDate} now={now} /> : null}
-      {view === "day" ? <DayTimeline events={selectedEvents} dateKey={selectedDate} now={now} /> : null}
+      {view === "week" ? <WeekCalendar events={store.data.events} selectedDate={selectedDate} now={now} onEventClick={setSelectedEvent} /> : null}
+      {view === "day" ? <DayTimeline events={selectedEvents} dateKey={selectedDate} now={now} onEventClick={setSelectedEvent} /> : null}
+      <EventDetailsSheet event={selectedEvent} store={store} onClose={() => setSelectedEvent(null)} />
     </div>
   );
 }
@@ -816,7 +823,7 @@ function MonthCalendar({ data, selectedDate, onSelect }: { data: DayBoardData; s
   );
 }
 
-function AgendaPanel({ dateKey, events }: { dateKey: string; events: CalendarEvent[] }) {
+function AgendaPanel({ dateKey, events, onEventClick }: { dateKey: string; events: CalendarEvent[]; onEventClick: (event: CalendarEvent) => void }) {
   const date = new Date(`${dateKey}T12:00:00`);
 
   return (
@@ -825,7 +832,7 @@ function AgendaPanel({ dateKey, events }: { dateKey: string; events: CalendarEve
       <div className="mt-6 space-y-4">
         {events.length === 0 ? <EmptyState>Nothing scheduled.</EmptyState> : null}
         {events.map((event) => (
-          <div key={event.id} className="grid grid-cols-[90px_1fr] gap-4 border-b border-[#e5e5e5] pb-4">
+          <button key={event.id} onClick={() => onEventClick(event)} className="grid w-full grid-cols-[90px_1fr] gap-4 border-b border-[#e5e5e5] pb-4 text-left">
             <div className="font-medium">{formatTime(event.startTime)}</div>
             <div>
               <div className="text-lg font-medium">{event.title}</div>
@@ -833,14 +840,14 @@ function AgendaPanel({ dateKey, events }: { dateKey: string; events: CalendarEve
                 {formatTime(event.startTime)}-{formatTime(event.endTime)} {event.location ? `• ${event.location}` : ""}
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </aside>
   );
 }
 
-function WeekCalendar({ events, selectedDate, now }: { events: CalendarEvent[]; selectedDate: string; now: Date }) {
+function WeekCalendar({ events, selectedDate, now, onEventClick }: { events: CalendarEvent[]; selectedDate: string; now: Date; onEventClick: (event: CalendarEvent) => void }) {
   const days = getWeekDays(selectedDate);
   const hours = Array.from({ length: 17 }, (_, index) => index + 6);
   const currentTop = currentTimeTopPercent(now);
@@ -877,10 +884,10 @@ function WeekCalendar({ events, selectedDate, now }: { events: CalendarEvent[]; 
                 const top = ((start - 360) / (17 * 60)) * 100;
                 const height = ((end - start) / (17 * 60)) * 100;
                 return (
-                  <div key={event.id} className="absolute left-1 right-1 rounded-lg border border-black bg-white p-2 text-xs" style={{ top: `${top}%`, height: `${height}%` }}>
+                  <button key={event.id} onClick={() => onEventClick(event)} className="absolute left-1 right-1 rounded-lg border border-black bg-white p-2 text-left text-xs" style={{ top: `${top}%`, height: `${height}%` }}>
                     <div className="font-semibold">{event.title}</div>
                     <div>{formatShortTime(event.startTime)}</div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -891,7 +898,7 @@ function WeekCalendar({ events, selectedDate, now }: { events: CalendarEvent[]; 
   );
 }
 
-function DayTimeline({ events, dateKey, now }: { events: CalendarEvent[]; dateKey: string; now: Date }) {
+function DayTimeline({ events, dateKey, now, onEventClick }: { events: CalendarEvent[]; dateKey: string; now: Date; onEventClick: (event: CalendarEvent) => void }) {
   const hours = Array.from({ length: 17 }, (_, index) => index + 6);
   const isToday = dateKey === todayKey();
 
@@ -910,8 +917,9 @@ function DayTimeline({ events, dateKey, now }: { events: CalendarEvent[]; dateKe
           const start = minutesFromTime(event.startTime);
           const end = minutesFromTime(event.endTime);
           return (
-            <div
+            <button
               key={event.id}
+              onClick={() => onEventClick(event)}
               className="absolute left-20 right-2 rounded-lg border border-black bg-white p-4"
               style={{
                 top: `${((start - 360) / (17 * 60)) * 100}%`,
@@ -920,7 +928,7 @@ function DayTimeline({ events, dateKey, now }: { events: CalendarEvent[]; dateKe
             >
               <div className="font-semibold">{event.title}</div>
               <div className="mt-1 text-sm text-[#555]">{formatTime(event.startTime)}-{formatTime(event.endTime)}</div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1087,6 +1095,9 @@ function HabitsPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
           </div>
           <div className="flex items-center gap-4">
             <WeekDots pattern={habit.weekPattern} />
+            <span className={cn("flex h-9 w-9 items-center justify-center rounded-full border border-black", habit.completedToday && "bg-black text-white")}>
+              {habit.completedToday ? <Check className="h-5 w-5" /> : null}
+            </span>
             <span className="rounded-lg border border-[#dcdcdc] px-3 py-2 text-sm font-medium">{habit.completedToday ? "Done" : "Mark Complete"}</span>
           </div>
         </button>
@@ -1330,6 +1341,99 @@ function QuickOption({ icon, title, detail, onClick, disabled }: { icon: ReactNo
   );
 }
 
+function EventDetailsSheet({
+  event,
+  store,
+  onClose
+}: {
+  event: CalendarEvent | null;
+  store: ReturnType<typeof useDayBoardData>;
+  onClose: () => void;
+}) {
+  const [mode, setMode] = useState<"details" | "edit" | "delete">("details");
+
+  useEffect(() => {
+    if (event) setMode("details");
+  }, [event]);
+
+  if (!event) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/20" role="dialog" aria-modal="true">
+      <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl lg:left-1/2 lg:top-1/2 lg:bottom-auto lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-xl lg:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold lg:text-xl">{mode === "edit" ? "Edit Event" : mode === "delete" ? "Delete Event" : "Event Details"}</h2>
+          <button onClick={onClose} className="rounded-lg border border-[#dcdcdc] p-1.5 lg:p-2" aria-label="Close">
+            <X className="h-4 w-4 lg:h-5 lg:w-5" />
+          </button>
+        </div>
+
+        {mode === "details" ? (
+          <div>
+            <div className="rounded-lg border border-[#e0e0e0] p-4">
+              <div className="text-xl font-semibold">{event.title}</div>
+              <div className="mt-3 grid gap-2 text-sm text-[#555]">
+                <div>Date: {formatMobileDate(new Date(`${event.date}T12:00:00`))}</div>
+                <div>
+                  Time: {formatTime(event.startTime)}-{formatTime(event.endTime)}
+                </div>
+                <div>Category: {event.category}</div>
+                {event.location ? <div>Location: {event.location}</div> : null}
+                {event.description ? <div>Description: {event.description}</div> : null}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button onClick={() => setMode("edit")} className="rounded-lg border border-[#dcdcdc] px-4 py-2.5 text-sm font-semibold">
+                Edit
+              </button>
+              <button onClick={() => setMode("delete")} className="rounded-lg border border-[#ef4444] px-4 py-2.5 text-sm font-semibold text-[#b91c1c]">
+                Delete
+              </button>
+              <button onClick={onClose} className="rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white">
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {mode === "edit" ? (
+          <EventForm
+            store={store}
+            initialEvent={event}
+            onDone={() => {
+              setMode("details");
+              onClose();
+            }}
+          />
+        ) : null}
+
+        {mode === "delete" ? (
+          <div>
+            <div className="rounded-lg border border-[#e0e0e0] bg-[#fafafa] p-4">
+              <div className="font-semibold">Delete this event?</div>
+              <div className="mt-1 text-sm text-[#666]">This cannot be undone.</div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button onClick={() => setMode("details")} className="rounded-lg border border-[#dcdcdc] px-4 py-2.5 text-sm font-semibold">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  store.deleteEvent(event.id);
+                  onClose();
+                }}
+                className="rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function TaskForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>; onDone: () => void }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(todayKey());
@@ -1369,32 +1473,49 @@ function TaskForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
   );
 }
 
-function EventForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>; onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(todayKey());
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [category, setCategory] = useState<EventCategory>("personal");
+function EventForm({
+  store,
+  onDone,
+  initialEvent
+}: {
+  store: ReturnType<typeof useDayBoardData>;
+  onDone: () => void;
+  initialEvent?: CalendarEvent;
+}) {
+  const [title, setTitle] = useState(initialEvent?.title ?? "");
+  const [date, setDate] = useState(initialEvent?.date ?? todayKey());
+  const [startTime, setStartTime] = useState(initialEvent?.startTime ?? "09:00");
+  const [endTime, setEndTime] = useState(initialEvent?.endTime ?? "10:00");
+  const [category, setCategory] = useState<EventCategory>(initialEvent?.category ?? "personal");
+  const [location, setLocation] = useState(initialEvent?.location ?? "");
+  const [description, setDescription] = useState(initialEvent?.description ?? "");
   const [conflict, setConflict] = useState<CalendarEvent | null>(null);
 
   function submit(event: FormEvent) {
     event.preventDefault();
     const newEvent: CalendarEvent = {
-      id: "preview",
+      id: initialEvent?.id ?? "preview",
       title: title.trim(),
       date,
       startTime,
       endTime,
       category,
-      priority: "medium",
-      repeatType: "never"
+      location: location.trim() || undefined,
+      description: description.trim() || undefined,
+      priority: initialEvent?.priority ?? "medium",
+      repeatType: initialEvent?.repeatType ?? "never",
+      repeatDays: initialEvent?.repeatDays
     };
     const foundConflict = detectConflict(newEvent, store.data.events);
     if (foundConflict && !conflict) {
       setConflict(foundConflict);
       return;
     }
-    store.addEvent(newEvent);
+    if (initialEvent) {
+      store.updateEvent(initialEvent.id, newEvent);
+    } else {
+      store.addEvent(newEvent);
+    }
     onDone();
   }
 
@@ -1407,6 +1528,11 @@ function EventForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData
         <TextInput label="End Time" value={endTime} onChange={setEndTime} type="time" />
       </div>
       <Select label="Category" value={category} onChange={(value) => setCategory(value as EventCategory)} options={["school", "work", "personal", "gym", "study", "appointment", "deadline", "social", "other"]} />
+      <TextInput label="Location" value={location} onChange={setLocation} />
+      <label className="block">
+        <span className="text-xs font-medium text-[#666] lg:text-sm">Description</span>
+        <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-[#dcdcdc] px-3 py-2 text-sm outline-none focus:border-black lg:text-base" />
+      </label>
       {conflict ? (
         <div className="rounded-lg border border-black bg-[#fafafa] p-3 text-sm">
           <div className="font-semibold">Schedule conflict</div>

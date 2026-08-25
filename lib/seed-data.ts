@@ -43,5 +43,6 @@ export const seedData: DayBoardData = {
     }
   ],
   assignments: [],
-  exams: []
+  exams: [],
+  habitLogs: []
 };
