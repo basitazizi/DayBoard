@@ -418,11 +418,15 @@ function TasksCard({ store, now }: { store: ReturnType<typeof useDayBoardData>; 
     <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
       <CardHeader icon={<CheckSquare className="h-7 w-7" />} title="TASKS" href="/tasks" />
       <div className="flex-1">
-        {tasks.slice(0, 6).map((task) => (
-          <TaskLine key={task.id} task={task} now={now} onToggle={() => store.updateTaskStatus(task.id, task.status === "completed" ? "not_started" : "completed")} />
-        ))}
+        {tasks.length === 0 ? (
+          <EmptyState>Add your first task with the + button.</EmptyState>
+        ) : (
+          tasks.slice(0, 6).map((task) => (
+            <TaskLine key={task.id} task={task} now={now} onToggle={() => store.updateTaskStatus(task.id, task.status === "completed" ? "not_started" : "completed")} />
+          ))
+        )}
       </div>
-      <div>
+      <div className={cn(total === 0 && "hidden")}>
         <div className="mt-2 text-lg lg:text-base">
           {completed} / {total} completed
         </div>
@@ -465,6 +469,7 @@ function UpcomingCard({ data }: { data: DayBoardData }) {
     <article className="card flex min-h-[300px] flex-col overflow-hidden p-6 lg:min-h-0 lg:p-5">
       <CardHeader icon={<CalendarDays className="h-7 w-7" />} title="UPCOMING" href="/calendar" />
       <div className="flex-1 space-y-3">
+        {items.length === 0 ? <EmptyState>Assignments, exams, and important dates will appear here.</EmptyState> : null}
         {items.map((item) => {
           const date = new Date(`${item.date}T12:00:00`);
           return (
@@ -491,6 +496,7 @@ function HabitsCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
     <article className="card min-h-[300px] overflow-hidden p-6 lg:min-h-0 lg:p-5">
       <CardHeader icon={<Target className="h-7 w-7" />} title="HABITS" href="/habits" />
       <div>
+        {store.data.habits.length === 0 ? <EmptyState>Add habits you want to track daily or weekly.</EmptyState> : null}
         {store.data.habits.slice(0, 5).map((habit) => (
           <button
             key={habit.id}
@@ -525,17 +531,24 @@ function WeekDots({ pattern }: { pattern: boolean[] }) {
 function InsightsCard({ data }: { data: DayBoardData }) {
   const total = data.tasks.length;
   const completed = data.tasks.filter((task) => task.status === "completed").length;
+  const hasActivity = data.tasks.length > 0 || data.habits.length > 0 || data.events.length > 0;
   const focusScore = Math.round((completed / Math.max(total, 1)) * 45 + 30);
   const points = [25, 58, 44, 78, 43, 74, 35, 58, 66, 92, 73, 87];
 
   return (
     <article className="card min-h-[300px] overflow-hidden p-6 lg:min-h-0 lg:p-5">
       <CardHeader icon={<BarChart3 className="h-7 w-7" />} title="INSIGHTS" href="/insights" />
-      <MetricRow label="Tasks Completed" value={`${completed + 16} / ${total + 18}`} />
-      <MetricRow label="Study Time" value="12h 45m" />
-      <MetricRow label="Gym Sessions" value="3 this week" />
-      <MetricRow label="Focus Score" value={`${focusScore}%`} />
-      <MiniChart points={points} />
+      {hasActivity ? (
+        <>
+          <MetricRow label="Tasks Completed" value={`${completed} / ${total}`} />
+          <MetricRow label="Study Time" value="0h 0m" />
+          <MetricRow label="Gym Sessions" value="0 this week" />
+          <MetricRow label="Focus Score" value={`${focusScore}%`} />
+          <MiniChart points={points} />
+        </>
+      ) : (
+        <EmptyState>Insights unlock after you add tasks, habits, or study sessions.</EmptyState>
+      )}
     </article>
   );
 }
@@ -941,6 +954,7 @@ function TasksPage({ store, now }: { store: ReturnType<typeof useDayBoardData>; 
         onChange={setFilter}
       />
       <div className="mt-5 card overflow-hidden">
+        {filtered.length === 0 ? <EmptyState>No tasks yet. Use the + button to add one.</EmptyState> : null}
         {filtered.map((task) => (
           <TaskPageRow key={task.id} task={task} now={now} store={store} />
         ))}
@@ -1025,6 +1039,7 @@ function SchoolPage({ data }: { data: DayBoardData }) {
       ) : null}
       {tab === "assignments" ? (
         <div className="mt-5 card divide-y divide-[#e5e5e5]">
+          {data.assignments.length === 0 ? <EmptyState>No assignments yet. Add one from the + menu.</EmptyState> : null}
           {data.assignments.map((assignment) => (
             <div key={assignment.id} className="p-5">
               <div className="text-lg font-semibold">
@@ -1038,6 +1053,7 @@ function SchoolPage({ data }: { data: DayBoardData }) {
       ) : null}
       {tab === "exams" ? (
         <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {data.exams.length === 0 ? <EmptyState>No exams yet. Add one from the + menu.</EmptyState> : null}
           {data.exams.map((exam) => (
             <article key={exam.id} className="card p-5">
               <div className="text-xl font-semibold">{exam.title}</div>
@@ -1061,6 +1077,7 @@ function SchoolPage({ data }: { data: DayBoardData }) {
 function HabitsPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
   return (
     <div className="mx-auto max-w-4xl card divide-y divide-[#e5e5e5]">
+      {store.data.habits.length === 0 ? <EmptyState>No habits yet. Add a habit from the + menu.</EmptyState> : null}
       {store.data.habits.map((habit) => (
         <button key={habit.id} onClick={() => store.toggleHabit(habit.id)} className="grid w-full gap-4 p-5 text-left sm:grid-cols-[1fr_auto] sm:items-center">
           <div className="flex gap-4">
@@ -1084,6 +1101,7 @@ function InsightsPage({ data }: { data: DayBoardData }) {
   const completed = data.tasks.filter((task) => task.status === "completed").length;
   const total = data.tasks.length;
   const habitCompleted = data.habits.filter((habit) => habit.completedToday).length;
+  const hasActivity = total > 0 || data.habits.length > 0 || data.events.length > 0;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -1096,36 +1114,31 @@ function InsightsPage({ data }: { data: DayBoardData }) {
         ]}
         onChange={() => undefined}
       />
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <InsightMetric title="Tasks Completed" value={`${completed + 16} / ${total + 18}`} />
-        <InsightMetric title="Completion Rate" value={`${Math.round(((completed + 16) / (total + 18)) * 100)}%`} />
-        <InsightMetric title="Focused Time" value="12h 45m" />
-        <InsightMetric title="Habits" value={`${habitCompleted} / ${data.habits.length}`} />
-        <InsightMetric title="Workload" value="Heavy" />
-      </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-        <article className="card p-6">
-          <h2 className="text-xl font-semibold">Productivity Chart</h2>
-          <MiniChart points={[32, 62, 48, 78, 49, 75, 42, 59, 68, 91, 70, 86]} />
-        </article>
-        <article className="card p-6">
-          <h2 className="text-xl font-semibold">Important This Week</h2>
-          <div className="mt-4 space-y-4">
-            <div>
-              <div className="font-semibold">Linear Algebra Midterm</div>
-              <div className="text-sm text-[#555]">2 days • preparation behind schedule</div>
-            </div>
-            <div>
-              <div className="font-semibold">CS Assignment</div>
-              <div className="text-sm text-[#555]">Tonight • high priority</div>
-            </div>
-            <div>
-              <div className="font-semibold">Project Deadline</div>
-              <div className="text-sm text-[#555]">4 days • heavy work remaining</div>
-            </div>
+      {hasActivity ? (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <InsightMetric title="Tasks Completed" value={`${completed} / ${total}`} />
+            <InsightMetric title="Completion Rate" value={`${Math.round((completed / Math.max(total, 1)) * 100)}%`} />
+            <InsightMetric title="Focused Time" value="0h 0m" />
+            <InsightMetric title="Habits" value={`${habitCompleted} / ${data.habits.length}`} />
+            <InsightMetric title="Workload" value="New" />
           </div>
-        </article>
-      </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+            <article className="card p-6">
+              <h2 className="text-xl font-semibold">Productivity Chart</h2>
+              <MiniChart points={[0, 0, 0, 0, 0, 0, 0]} />
+            </article>
+            <article className="card p-6">
+              <h2 className="text-xl font-semibold">Important This Week</h2>
+              <EmptyState>Important tasks, assignments, and exams will appear here.</EmptyState>
+            </article>
+          </div>
+        </>
+      ) : (
+        <div className="mt-5 card p-6">
+          <EmptyState>Add tasks, habits, assignments, or exams to start building insights.</EmptyState>
+        </div>
+      )}
     </div>
   );
 }
@@ -1152,6 +1165,7 @@ function NotesPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes" className="w-full outline-none" />
       </label>
       <div className="grid gap-4">
+        {notes.length === 0 ? <EmptyState>No notes yet. Add one from the + menu.</EmptyState> : null}
         {notes.map((note) => (
           <article key={note.id} className="card p-5">
             <div className="flex items-center justify-between gap-4">

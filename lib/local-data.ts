@@ -6,7 +6,7 @@ import { formatTime } from "./date-utils";
 import { seedData } from "./seed-data";
 import { supabase } from "./supabase";
 
-const STORAGE_KEY = "dayboard.local.v1";
+const STORAGE_KEY = "dayboard.local.v2";
 
 function isUuid(value?: string) {
   return Boolean(value?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i));
