@@ -135,7 +135,7 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
         )}
       </div>
 
-      <MobileBottomNav onQuickAdd={() => setQuickAddOpen(true)} />
+      <MobileBottomNav onQuickAdd={() => setQuickAddOpen(true)} compact={screen === "dashboard"} />
       <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} store={store} />
       <AiBriefPanel open={aiBriefOpen} onClose={() => setAiBriefOpen(false)} session={auth.session} />
     </main>
@@ -151,7 +151,7 @@ function DayBoardHydrationShell({ displayMode }: { displayMode: boolean }) {
           <div className="h-7 w-32 rounded bg-[#f3f3f3]" />
           <div className="ml-auto h-10 w-24 rounded-lg bg-[#f3f3f3]" />
         </header>
-        <header className="h-[137px] border-b border-[#e5e5e5] bg-white px-4 py-5 lg:hidden">
+        <header className="h-[112px] border-b border-[#e5e5e5] bg-white px-3 py-3 md:h-[137px] md:px-4 md:py-5 lg:hidden">
           <div className="mx-auto h-5 w-24 rounded bg-[#f3f3f3]" />
           <div className="mt-7 h-7 w-52 rounded bg-[#f3f3f3]" />
         </header>
@@ -192,7 +192,7 @@ function DashboardScreen({
       <MobileDashboardHeader data={data} auth={auth} now={now} onQuickAdd={onQuickAdd} onAiBrief={onAiBrief} />
       {displayMode ? <ActiveFocusBanner /> : null}
 
-      <section className="mobile-safe-bottom grid flex-1 grid-cols-1 gap-3 px-3 py-3 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
+      <section className="grid flex-1 grid-cols-1 gap-2 px-2 py-2 pb-[max(4.75rem,env(safe-area-inset-bottom))] md:grid-cols-2 md:gap-3 md:px-3 md:py-3 md:pb-[max(5.25rem,env(safe-area-inset-bottom))] lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
         <TodayCard data={data} now={now} />
         <TasksCard store={store} now={now} />
         <UpcomingCard data={data} />
@@ -353,7 +353,7 @@ function MobileDashboardHeader({
 
   return (
     <header className="block border-b border-[#e5e5e5] bg-white lg:hidden">
-      <div className="flex h-13 items-center justify-between px-4">
+      <div className="flex h-11 items-center justify-between px-3 md:h-13 md:px-4">
         <div className="h-8 w-16" aria-hidden="true" />
         <div className="text-base font-semibold">Dashboard</div>
         {auth.loading ? (
@@ -368,16 +368,16 @@ function MobileDashboardHeader({
           </Link>
         )}
       </div>
-      <div className="px-4 py-5">
+      <div className="px-3 py-3 md:px-4 md:py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold leading-tight">
+            <div className="flex items-center gap-1.5 text-xl font-semibold leading-tight md:gap-2 md:text-2xl">
               <span>
                 {greetingLabel}
               </span>
-              <Sun className="h-6 w-6 shrink-0" strokeWidth={1.8} />
+              <Sun className="h-5 w-5 shrink-0 md:h-6 md:w-6" strokeWidth={1.8} />
             </div>
-            <div className="mt-2 text-base text-[#666]">{formatMobileDate(now, data.timezone)}</div>
+            <div className="mt-1 text-sm text-[#666] md:mt-2 md:text-base">{formatMobileDate(now, data.timezone)}</div>
           </div>
           <button
             onClick={onQuickAdd}
@@ -387,11 +387,15 @@ function MobileDashboardHeader({
             <Plus className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/focus" className="inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">Start Focus</Link>
-          <button onClick={onAiBrief} className="inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">AI Brief</button>
+        <div className="mt-3 flex items-center gap-2 md:mt-4 md:flex-wrap">
+          <Link href="/focus" className="inline-flex whitespace-nowrap rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-xs font-medium md:px-4 md:py-2 md:text-sm">Start Focus</Link>
+          <button onClick={onAiBrief} className="inline-flex whitespace-nowrap rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-xs font-medium md:px-4 md:py-2 md:text-sm">AI Brief</button>
+          <div className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#e0e0e0] px-2.5 py-1.5 md:hidden" aria-label="Sunny, 72 degrees">
+            <Sun className="h-4 w-4" strokeWidth={1.7} />
+            <div className="text-sm font-semibold">72Â°</div>
+          </div>
         </div>
-        <div className="mt-4 ml-auto flex w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3">
+        <div className="mt-4 ml-auto hidden w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3 md:flex">
           <Sun className="h-7 w-7" strokeWidth={1.7} />
           <div className="text-2xl font-semibold">72°</div>
           <div className="text-sm text-[#333]">Sunny</div>
@@ -426,9 +430,9 @@ function ActiveFocusBanner() {
   );
 }
 
-function CardHeader({ icon, title, href }: { icon: ReactNode; title: string; href?: string }) {
+function CardHeader({ icon, title, href, compactMobile = false }: { icon: ReactNode; title: string; href?: string; compactMobile?: boolean }) {
   return (
-    <div className="mb-5 flex items-center justify-between gap-4">
+    <div className={cn("flex items-center justify-between gap-4", compactMobile ? "mb-3 md:mb-5" : "mb-5")}>
       <div className="flex items-center gap-3 lg:gap-5">
         {icon}
         <h2 className="text-base font-semibold tracking-normal lg:text-lg xl:text-xl">{title}</h2>
@@ -447,8 +451,8 @@ function TodayCard({ data, now }: { data: DayBoardData; now: Date }) {
   const events = getEventsForDate(data.events, today);
 
   return (
-    <article className="card flex min-h-[240px] flex-col overflow-hidden p-4 lg:min-h-0 lg:p-5">
-      <CardHeader icon={<CalendarDays className="h-5 w-5 lg:h-7 lg:w-7" />} title="TODAY" href="/calendar" />
+    <article className="card flex min-h-0 flex-col overflow-hidden p-3 md:min-h-[240px] md:p-4 lg:min-h-0 lg:p-5">
+      <CardHeader icon={<CalendarDays className="h-5 w-5 lg:h-7 lg:w-7" />} title="TODAY" href="/calendar" compactMobile />
       <div className="flex-1 space-y-0">
         {events.length === 0 ? (
           <EmptyState>Nothing scheduled today.</EmptyState>
@@ -457,11 +461,11 @@ function TodayCard({ data, now }: { data: DayBoardData; now: Date }) {
             const status = getEventStatus(event, now);
             const duration = minutesFromTime(event.endTime) - minutesFromTime(event.startTime);
             return (
-              <div key={event.id} className={cn("grid grid-cols-[88px_1px_1fr] gap-5", status === "finished" && "opacity-45")}>
-                <div className="py-2 text-sm font-medium lg:py-2 lg:text-base xl:text-lg">{formatTime(event.startTime)}</div>
+              <div key={event.id} className={cn("grid grid-cols-[72px_1px_1fr] gap-3 md:grid-cols-[88px_1px_1fr] md:gap-5", status === "finished" && "opacity-45")}>
+                <div className="py-1.5 text-sm font-medium md:py-2 lg:text-base xl:text-lg">{formatTime(event.startTime)}</div>
                 <div className="bg-[#e5e5e5]" />
-                <div className={cn("border-b border-[#e5e5e5] py-2 lg:py-2", status === "active" && "rounded-lg border border-black px-3")}>
-                  <div className="flex items-center gap-4">
+                <div className={cn("border-b border-[#e5e5e5] py-1.5 md:py-2", status === "active" && "rounded-lg border border-black px-3")}>
+                  <div className="flex items-center gap-3 md:gap-4">
                     <span className="text-[#111]">{eventIconMap[event.category]}</span>
                     <div>
                       {status === "active" ? <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em]">● Now</div> : null}
@@ -475,7 +479,7 @@ function TodayCard({ data, now }: { data: DayBoardData; now: Date }) {
           })
         )}
       </div>
-      <CardFooter href="/calendar">View calendar</CardFooter>
+      <CardFooter href="/calendar" compactMobile>View calendar</CardFooter>
     </article>
   );
 }
@@ -652,9 +656,9 @@ function NotesCard({ store }: { store: ReturnType<typeof useDayBoardData> }) {
   );
 }
 
-function CardFooter({ href, children }: { href: string; children: ReactNode }) {
+function CardFooter({ href, children, compactMobile = false }: { href: string; children: ReactNode; compactMobile?: boolean }) {
   return (
-    <div className="mt-3 text-right text-sm lg:text-base">
+    <div className={cn("text-right text-sm lg:text-base", compactMobile ? "mt-2 md:mt-3" : "mt-3")}>
       <Link href={href} className="inline-flex items-center gap-3 font-medium">
         {children}
         <ChevronRight className="h-5 w-5" />
@@ -722,7 +726,7 @@ function DesktopNavigation({ active }: { active: Screen }) {
   );
 }
 
-function MobileBottomNav({ onQuickAdd }: { onQuickAdd: () => void }) {
+function MobileBottomNav({ onQuickAdd, compact = false }: { onQuickAdd: () => void; compact?: boolean }) {
   const pathname = usePathname();
   const mobileItems = [
     { href: "/", label: "Dashboard", icon: Home },
@@ -733,23 +737,23 @@ function MobileBottomNav({ onQuickAdd }: { onQuickAdd: () => void }) {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e5e5] bg-white/95 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
+    <nav className={cn("fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e5e5] bg-white/95 px-3 backdrop-blur lg:hidden", compact ? "pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1.5 md:pb-[max(0.45rem,env(safe-area-inset-bottom))] md:pt-2" : "pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-2")}>
       <button
         onClick={onQuickAdd}
-        className="absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-white shadow-[0_0_0_1px_#d9d9d9]"
+        className={cn("absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-white shadow-[0_0_0_1px_#d9d9d9]", compact ? "h-12 w-12 md:h-14 md:w-14" : "h-14 w-14")}
         aria-label="Add new"
       >
-        <Plus className="h-7 w-7" />
+        <Plus className={cn(compact ? "h-6 w-6 md:h-7 md:w-7" : "h-7 w-7")} />
       </button>
       <div className="grid grid-cols-5 items-end">
         {mobileItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-0.5 text-[#555]", index === 2 && "pt-6", isActive && "text-black")}>
-              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-xs font-medium">{item.label}</span>
-              <span className={cn("mt-1 h-1 w-8 rounded-full", isActive ? "bg-black" : "bg-transparent")} />
+            <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-0.5 text-[#555]", index === 2 && (compact ? "pt-5 md:pt-6" : "pt-6"), isActive && "text-black")}>
+              <Icon className={cn(compact ? "h-4.5 w-4.5 md:h-5 md:w-5" : "h-5 w-5")} strokeWidth={isActive ? 2.5 : 2} />
+              <span className={cn("font-medium", compact ? "text-[0.6875rem] md:text-xs" : "text-xs")}>{item.label}</span>
+              <span className={cn("mt-1 h-1 rounded-full", compact ? "w-7 md:w-8" : "w-8", isActive ? "bg-black" : "bg-transparent")} />
             </Link>
           );
         })}
