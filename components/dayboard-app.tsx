@@ -218,7 +218,8 @@ function DashboardHeader({
   onAiBrief: () => void;
 }) {
   const greeting = getGreeting(now);
-  const displayName = auth.user?.user_metadata?.display_name || data.displayName;
+  const displayName = auth.displayName;
+  const greetingLabel = displayName ? `${greeting.greeting}, ${displayName}` : greeting.greeting;
 
   return (
     <header className="hidden items-center justify-between border-b border-[#e5e5e5] bg-white px-8 py-3 lg:flex">
@@ -245,7 +246,7 @@ function DashboardHeader({
 
       <div className="min-w-[360px]">
         <div className="text-2xl font-semibold">
-          {greeting.greeting}, {displayName}
+          {greetingLabel}
         </div>
         <div className="mt-1 text-lg text-[#555]">{greeting.detail}</div>
       </div>
@@ -347,7 +348,8 @@ function MobileDashboardHeader({
   onAiBrief: () => void;
 }) {
   const greeting = getGreeting(now);
-  const displayName = auth.user?.user_metadata?.display_name || data.displayName;
+  const displayName = auth.displayName;
+  const greetingLabel = displayName ? `${greeting.greeting}, ${displayName}` : greeting.greeting;
 
   return (
     <header className="block border-b border-[#e5e5e5] bg-white lg:hidden">
@@ -371,7 +373,7 @@ function MobileDashboardHeader({
           <div>
             <div className="flex items-center gap-2 text-2xl font-semibold leading-tight">
               <span>
-                {greeting.greeting}, {displayName}
+                {greetingLabel}
               </span>
               <Sun className="h-6 w-6 shrink-0" strokeWidth={1.8} />
             </div>
@@ -1273,14 +1275,54 @@ function NotesPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
 }
 
 function SettingsPage({ store, auth }: { store: ReturnType<typeof useDayBoardData>; auth: ReturnType<typeof useSupabaseAuth> }) {
-  const displayName = auth.user?.user_metadata?.display_name || store.data.displayName;
+  const [displayName, setDisplayName] = useState(auth.displayName);
+  const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [nameError, setNameError] = useState("");
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setDisplayName(auth.displayName);
+  }, [auth.displayName]);
+
+  async function saveName(event: FormEvent) {
+    event.preventDefault();
+    setNameStatus("saving");
+    setNameError("");
+    const result = await auth.saveDisplayName(displayName);
+    if (result.error) {
+      setNameStatus("error");
+      setNameError(result.error.message);
+      return;
+    }
+    setDisplayName(displayName.trim().slice(0, 80));
+    setNameStatus("saved");
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <SettingsSection title="Account">
         <div className="grid gap-3 sm:grid-cols-2">
-          <ReadonlyField label="Display Name" value={displayName} />
+          <form onSubmit={saveName} className="rounded-lg border border-[#e0e0e0] p-4 sm:col-span-2">
+            <label className="text-sm text-[#666]" htmlFor="display-name">Display Name</label>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <input
+                id="display-name"
+                value={displayName}
+                onChange={(event) => { setDisplayName(event.target.value); setNameStatus("idle"); }}
+                maxLength={80}
+                placeholder="Enter your name"
+                className="h-11 min-w-0 flex-1 rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black"
+              />
+              <button disabled={nameStatus === "saving" || displayName.trim() === auth.displayName} className="h-11 rounded-lg bg-black px-5 font-medium text-white disabled:opacity-40">
+                {nameStatus === "saving" ? "Saving…" : "Save Name"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-[#666]">
+              {auth.user ? "Saved to your DayBoard account and shown on your signed-in devices." : "Saved only in this browser until you create an account."}
+            </p>
+            {nameStatus === "saved" ? <p className="mt-2 text-sm text-[#166534]">Display name saved.</p> : null}
+            {nameStatus === "error" ? <p className="mt-2 text-sm text-[#991b1b]">{nameError || "Could not save the display name."}</p> : null}
+          </form>
           <ReadonlyField label="Email" value={auth.user?.email ?? "Not signed in"} />
           <ReadonlyField label="Timezone" value={store.data.timezone} />
         </div>

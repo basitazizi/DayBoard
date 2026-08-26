@@ -14,7 +14,7 @@ export function LoginPage() {
   const router = useRouter();
   const auth = useSupabaseAuth();
   const [mode, setMode] = useState<AuthMode>("signin");
-  const [displayName, setDisplayName] = useState("Basit");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +35,13 @@ export function LoginPage() {
     setMessage(null);
 
     const normalizedEmail = email.trim();
-    const normalizedName = displayName.trim() || "Basit";
+    const normalizedName = displayName.trim().slice(0, 80);
+
+    if (mode === "signup" && !normalizedName) {
+      setSubmitting(false);
+      setError("Enter a display name.");
+      return;
+    }
 
     const result =
       mode === "signup"
@@ -131,8 +137,10 @@ export function LoginPage() {
                   <input
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
+                    required
+                    maxLength={80}
                     className="mt-1 h-12 w-full rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black"
-                    placeholder="Basit"
+                    placeholder="Your name"
                   />
                 </label>
               ) : null}

@@ -1,7 +1,7 @@
 import type { DayBoardData } from "@/types/dayboard";
 
 export const seedData: DayBoardData = {
-  displayName: "Basit",
+  displayName: "",
   timezone: "America/Los_Angeles",
   tasks: [],
   events: [],
