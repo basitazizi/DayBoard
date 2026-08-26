@@ -60,6 +60,7 @@ import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
 import { getGreeting } from "@/lib/time-logic";
 import { getTaskPriority, sortRelevantTasks } from "@/lib/task-priority";
 import type { CalendarEvent, CalendarView, DayBoardData, EventCategory, Habit, Task, TaskPriority } from "@/types/dayboard";
+import { AiBriefPanel } from "@/components/ai-brief-panel";
 
 type Screen = "dashboard" | "calendar" | "tasks" | "school" | "habits" | "insights" | "notes" | "settings" | "display";
 
@@ -110,6 +111,7 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
   const store = useDayBoardData();
   const auth = useSupabaseAuth();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [aiBriefOpen, setAiBriefOpen] = useState(false);
   const now = useNow();
   const isDisplay = screen === "display";
 
@@ -127,7 +129,7 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
     >
       <div className={cn("mx-auto flex min-h-dvh w-full max-w-[1920px] flex-col lg:h-dvh lg:min-h-0", isDisplay ? "p-3" : "lg:p-3")}>
         {screen === "dashboard" || isDisplay ? (
-          <DashboardScreen store={store} auth={auth} now={now} displayMode={isDisplay} onQuickAdd={() => setQuickAddOpen(true)} />
+          <DashboardScreen store={store} auth={auth} now={now} displayMode={isDisplay} onQuickAdd={() => setQuickAddOpen(true)} onAiBrief={() => setAiBriefOpen(true)} />
         ) : (
           <InnerPageFrame screen={screen} store={store} auth={auth} now={now} onQuickAdd={() => setQuickAddOpen(true)} />
         )}
@@ -135,6 +137,7 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
 
       <MobileBottomNav onQuickAdd={() => setQuickAddOpen(true)} />
       <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} store={store} />
+      <AiBriefPanel open={aiBriefOpen} onClose={() => setAiBriefOpen(false)} session={auth.session} />
     </main>
   );
 }
@@ -171,20 +174,22 @@ function DashboardScreen({
   auth,
   now,
   displayMode,
-  onQuickAdd
+  onQuickAdd,
+  onAiBrief
 }: {
   store: ReturnType<typeof useDayBoardData>;
   auth: ReturnType<typeof useSupabaseAuth>;
   now: Date;
   displayMode: boolean;
   onQuickAdd: () => void;
+  onAiBrief: () => void;
 }) {
   const { data } = store;
 
   return (
     <div className={cn("flex min-h-dvh flex-col lg:h-full lg:min-h-0", displayMode ? "gap-3" : "lg:gap-3")}>
-      <DashboardHeader data={data} auth={auth} now={now} />
-      <MobileDashboardHeader data={data} auth={auth} now={now} onQuickAdd={onQuickAdd} />
+      <DashboardHeader data={data} auth={auth} now={now} onAiBrief={onAiBrief} />
+      <MobileDashboardHeader data={data} auth={auth} now={now} onQuickAdd={onQuickAdd} onAiBrief={onAiBrief} />
       {displayMode ? <ActiveFocusBanner /> : null}
 
       <section className="mobile-safe-bottom grid flex-1 grid-cols-1 gap-3 px-3 py-3 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
@@ -204,11 +209,13 @@ function DashboardScreen({
 function DashboardHeader({
   data,
   auth,
-  now
+  now,
+  onAiBrief
 }: {
   data: DayBoardData;
   auth: ReturnType<typeof useSupabaseAuth>;
   now: Date;
+  onAiBrief: () => void;
 }) {
   const greeting = getGreeting(now);
   const displayName = auth.user?.user_metadata?.display_name || data.displayName;
@@ -255,6 +262,10 @@ function DashboardHeader({
       <Link href="/focus" className="rounded-lg border border-[#dcdcdc] px-5 py-3 text-base font-medium">
         Start Focus
       </Link>
+
+      <button onClick={onAiBrief} className="rounded-lg border border-[#dcdcdc] px-5 py-3 text-base font-medium">
+        AI Brief
+      </button>
 
       <ProfileControl auth={auth} />
     </header>
@@ -326,12 +337,14 @@ function MobileDashboardHeader({
   data,
   auth,
   now,
-  onQuickAdd
+  onQuickAdd,
+  onAiBrief
 }: {
   data: DayBoardData;
   auth: ReturnType<typeof useSupabaseAuth>;
   now: Date;
   onQuickAdd: () => void;
+  onAiBrief: () => void;
 }) {
   const greeting = getGreeting(now);
   const displayName = auth.user?.user_metadata?.display_name || data.displayName;
@@ -372,9 +385,10 @@ function MobileDashboardHeader({
             <Plus className="h-5 w-5" />
           </button>
         </div>
-        <Link href="/focus" className="mt-4 inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">
-          Start Focus
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/focus" className="inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">Start Focus</Link>
+          <button onClick={onAiBrief} className="inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">AI Brief</button>
+        </div>
         <div className="mt-4 ml-auto flex w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3">
           <Sun className="h-7 w-7" strokeWidth={1.7} />
           <div className="text-2xl font-semibold">72°</div>
