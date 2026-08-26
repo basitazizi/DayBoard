@@ -19,7 +19,7 @@ type Brief = {
   recommendedTaskId: string | null;
   focusMinutes: number | null;
   spokenText: string;
-  fallback: boolean;
+  warnings: string[];
 };
 
 export function AiBriefPanel({ open, onClose, session }: { open: boolean; onClose: () => void; session: Session | null }) {
@@ -78,7 +78,7 @@ export function AiBriefPanel({ open, onClose, session }: { open: boolean; onClos
             <Brain className="h-6 w-6" strokeWidth={1.8} />
             <div>
               <h2 id="ai-brief-title" className="text-xl font-semibold">AI Brief</h2>
-              <p className="mt-1 text-sm text-[#666]">A short brief using only your DayBoard data.</p>
+              <p className="mt-1 text-sm text-[#666]">Local intelligence using only your DayBoard data.</p>
             </div>
           </div>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#dedede]" aria-label="Close AI Brief"><X className="h-4 w-4" /></button>
@@ -100,9 +100,10 @@ export function AiBriefPanel({ open, onClose, session }: { open: boolean; onClos
 
         {brief ? (
           <div className="mt-6">
-            {brief.fallback ? <div className="mb-4 text-xs font-medium uppercase tracking-[0.12em] text-[#666]">Factual fallback</div> : null}
+            <div className="mb-4 text-xs font-medium uppercase tracking-[0.12em] text-[#666]">Local DayBoard brief</div>
             <div className="space-y-3 text-[1.02rem] leading-7">{brief.lines.map((line, index) => <p key={index}>{line}</p>)}</div>
             {brief.recommendation ? <div className="mt-5 rounded-xl border border-[#dcdcdc] p-4"><div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#666]">Recommended</div><p className="mt-2 font-medium leading-6">{brief.recommendation}</p></div> : null}
+            {brief.warnings.length ? <p className="mt-4 text-xs leading-5 text-[#666]">{brief.warnings.join(" ")}</p> : null}
             <div className="mt-6 flex flex-wrap gap-2">
               <button onClick={listen} disabled={!ttsSupported} className="inline-flex items-center gap-2 rounded-lg border border-[#dcdcdc] px-4 py-2.5 text-sm font-semibold disabled:opacity-40"><Volume2 className="h-4 w-4" />Listen</button>
               <Link href={focusHref} onClick={onClose} className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white"><Play className="h-4 w-4" />Start Focus{brief.focusMinutes ? ` · ${brief.focusMinutes}m` : ""}</Link>
