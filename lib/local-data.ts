@@ -389,7 +389,7 @@ export function useDayBoardData() {
     if (!userId) return;
 
     const tables = ["tasks", "events", "courses", "assignments", "exams", "habits", "habit_logs", "notes"];
-    const channel = supabase.channel(`dayboard-user-${userId}`);
+    const channel = supabase.channel(`dayboard-user-${userId}-${crypto.randomUUID()}`);
 
     for (const table of tables) {
       channel.on(

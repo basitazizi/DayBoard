@@ -54,6 +54,9 @@ import {
 import { currentTimeTopPercent, detectConflict, getEventsForDate, getEventStatus, sortEvents } from "@/lib/calendar";
 import { useSupabaseAuth } from "@/lib/auth";
 import { useDayBoardData } from "@/lib/local-data";
+import { useTheme } from "@/lib/theme";
+import { supabase } from "@/lib/supabase";
+import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
 import { getGreeting } from "@/lib/time-logic";
 import { getTaskPriority, sortRelevantTasks } from "@/lib/task-priority";
 import type { CalendarEvent, CalendarView, DayBoardData, EventCategory, Habit, Task, TaskPriority } from "@/types/dayboard";
@@ -92,9 +95,10 @@ const habitIconMap: Record<Habit["icon"], ReactNode> = {
 };
 
 function useNow() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setNow(new Date());
     const interval = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(interval);
   }, []);
@@ -108,6 +112,10 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const now = useNow();
   const isDisplay = screen === "display";
+
+  if (!now) {
+    return <DayBoardHydrationShell displayMode={isDisplay} />;
+  }
 
   return (
     <main
@@ -131,6 +139,33 @@ export function DayBoardApp({ screen }: { screen: Screen }) {
   );
 }
 
+function DayBoardHydrationShell({ displayMode }: { displayMode: boolean }) {
+  return (
+    <main className="lcd-frame min-h-dvh bg-white text-[#111111]" aria-label="Loading DayBoard">
+      <div className={cn("mx-auto flex min-h-dvh w-full max-w-[1920px] flex-col", displayMode ? "p-3" : "lg:p-3")}>
+        <header className="hidden h-[106px] items-center gap-8 border-b border-[#e5e5e5] bg-white px-8 lg:flex">
+          <div className="h-12 w-12 rounded-lg border-2 border-black" />
+          <div className="h-7 w-32 rounded bg-[#f3f3f3]" />
+          <div className="ml-auto h-10 w-24 rounded-lg bg-[#f3f3f3]" />
+        </header>
+        <header className="h-[137px] border-b border-[#e5e5e5] bg-white px-4 py-5 lg:hidden">
+          <div className="mx-auto h-5 w-24 rounded bg-[#f3f3f3]" />
+          <div className="mt-7 h-7 w-52 rounded bg-[#f3f3f3]" />
+        </header>
+        <section className="grid flex-1 grid-cols-1 gap-3 px-3 py-3 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-2 lg:px-0">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="card min-h-[220px] bg-white p-5">
+              <div className="h-6 w-28 rounded bg-[#f3f3f3]" />
+              <div className="mt-6 h-3 w-full rounded bg-[#f3f3f3]" />
+              <div className="mt-3 h-3 w-4/5 rounded bg-[#f3f3f3]" />
+            </div>
+          ))}
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function DashboardScreen({
   store,
   auth,
@@ -144,12 +179,13 @@ function DashboardScreen({
   displayMode: boolean;
   onQuickAdd: () => void;
 }) {
-  const { data, lastSynced } = store;
+  const { data } = store;
 
   return (
     <div className={cn("flex min-h-dvh flex-col lg:h-full lg:min-h-0", displayMode ? "gap-3" : "lg:gap-3")}>
-      <DashboardHeader data={data} auth={auth} now={now} lastSynced={lastSynced} displayMode={displayMode} />
+      <DashboardHeader data={data} auth={auth} now={now} />
       <MobileDashboardHeader data={data} auth={auth} now={now} onQuickAdd={onQuickAdd} />
+      {displayMode ? <ActiveFocusBanner /> : null}
 
       <section className="mobile-safe-bottom grid flex-1 grid-cols-1 gap-3 px-3 py-3 md:grid-cols-2 lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[1.05fr_0.95fr] lg:gap-3 lg:overflow-hidden lg:px-0 lg:py-0">
         <TodayCard data={data} now={now} />
@@ -168,15 +204,11 @@ function DashboardScreen({
 function DashboardHeader({
   data,
   auth,
-  now,
-  lastSynced,
-  displayMode
+  now
 }: {
   data: DayBoardData;
   auth: ReturnType<typeof useSupabaseAuth>;
   now: Date;
-  lastSynced: Date;
-  displayMode: boolean;
 }) {
   const greeting = getGreeting(now);
   const displayName = auth.user?.user_metadata?.display_name || data.displayName;
@@ -220,15 +252,9 @@ function DashboardHeader({
         </div>
       </div>
 
-      <div className="h-16 w-px bg-[#e5e5e5]" />
-
-      <div className="flex items-center gap-4">
-        <Wifi className="h-10 w-10" strokeWidth={2} />
-        <div>
-          <div className="text-lg font-medium">Connected</div>
-          <div className="text-base text-[#555]">{displayMode ? "Display mode active" : `Synced ${formatClock(lastSynced)}`}</div>
-        </div>
-      </div>
+      <Link href="/focus" className="rounded-lg border border-[#dcdcdc] px-5 py-3 text-base font-medium">
+        Start Focus
+      </Link>
 
       <ProfileControl auth={auth} />
     </header>
@@ -240,7 +266,7 @@ function ProfileControl({ auth }: { auth: ReturnType<typeof useSupabaseAuth> }) 
   const email = auth.user?.email;
 
   if (auth.loading) {
-    return <div className="h-14 w-28 rounded-lg bg-[#f3f3f3]" aria-label="Checking session" />;
+    return <div className="flex h-14 items-center gap-2 rounded-lg border border-[#dcdcdc] px-4 text-sm text-[#666]" aria-label="Checking account"><User className="h-5 w-5" />Account</div>;
   }
 
   if (!auth.user) {
@@ -260,11 +286,12 @@ function ProfileControl({ auth }: { auth: ReturnType<typeof useSupabaseAuth> }) 
     <div className="relative">
       <button
         onClick={() => setOpen((value) => !value)}
-        className="flex h-14 w-14 items-center justify-center rounded-lg bg-black text-white"
+        className="flex h-14 items-center justify-center gap-2 rounded-lg bg-black px-5 text-white"
         aria-label="Open profile menu"
         style={{ color: "#ffffff" }}
       >
         <User className="h-7 w-7" />
+        <span className="text-base font-medium">Account</span>
       </button>
 
       {open ? (
@@ -314,7 +341,9 @@ function MobileDashboardHeader({
       <div className="flex h-13 items-center justify-between px-4">
         <div className="h-8 w-16" aria-hidden="true" />
         <div className="text-base font-semibold">Dashboard</div>
-        {auth.user ? (
+        {auth.loading ? (
+          <div className="h-8 w-8" aria-label="Checking account" />
+        ) : auth.user ? (
           <Link href="/settings" className="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-black text-white" aria-label="Profile">
             <User className="h-4 w-4" />
           </Link>
@@ -343,6 +372,9 @@ function MobileDashboardHeader({
             <Plus className="h-5 w-5" />
           </button>
         </div>
+        <Link href="/focus" className="mt-4 inline-flex rounded-lg border border-[#d8d8d8] px-4 py-2 text-sm font-medium">
+          Start Focus
+        </Link>
         <div className="mt-4 ml-auto flex w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3">
           <Sun className="h-7 w-7" strokeWidth={1.7} />
           <div className="text-2xl font-semibold">72°</div>
@@ -350,6 +382,31 @@ function MobileDashboardHeader({
         </div>
       </div>
     </header>
+  );
+}
+
+function ActiveFocusBanner() {
+  const { session, loading } = useActiveFocusSession();
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  if (loading || !session) return null;
+  const remaining = getFocusRemaining(session, now);
+  const label = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+
+  return (
+    <aside className="mx-3 grid items-center gap-3 rounded-xl border border-black px-5 py-4 lg:mx-0 lg:grid-cols-[auto_1fr_auto]" aria-live="polite">
+      <div className="text-sm font-semibold tracking-[0.16em]">FOCUS ACTIVE</div>
+      <div>
+        <div className="text-lg font-semibold">{session.focus_reason}</div>
+        <div className="mt-1 text-sm text-[#666]">{session.status === "paused" ? "Paused" : `${label} remaining`}</div>
+      </div>
+      <Link href="/focus" className="text-sm font-semibold">Open Focus →</Link>
+    </aside>
   );
 }
 
@@ -613,11 +670,11 @@ function MiniChart({ points }: { points: number[] }) {
     <div className="mt-3">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-24 w-full overflow-visible" role="img" aria-label="Weekly productivity line chart">
         {[0, 25, 50, 75, 100].map((value) => (
-          <line key={value} x1="0" x2={width} y1={height - (value / 100) * (height - 16) - 8} y2={height - (value / 100) * (height - 16) - 8} stroke="#e5e5e5" strokeWidth="1" />
+          <line key={value} x1="0" x2={width} y1={height - (value / 100) * (height - 16) - 8} y2={height - (value / 100) * (height - 16) - 8} stroke="var(--line)" strokeWidth="1" />
         ))}
-        <polyline points={coords} fill="none" stroke="#111111" strokeWidth="2.5" />
+        <polyline points={coords} fill="none" stroke="var(--foreground)" strokeWidth="2.5" />
         {points.map((value, index) => (
-          <circle key={index} cx={index * step} cy={height - (value / 100) * (height - 16) - 8} r="4" fill="#111111" />
+          <circle key={index} cx={index * step} cy={height - (value / 100) * (height - 16) - 8} r="4" fill="var(--foreground)" />
         ))}
       </svg>
       <div className="grid grid-cols-7 text-center text-xs font-medium">
@@ -999,6 +1056,9 @@ function TaskPageRow({ task, now, store }: { task: Task; now: Date; store: Retur
       <div className="flex gap-2 sm:justify-end">
         {task.status !== "completed" ? (
           <>
+            <Link href={`/focus?task=${encodeURIComponent(task.id)}`} className="rounded-lg border border-[#dcdcdc] px-3 py-2 text-sm font-medium">
+              Start Focus
+            </Link>
             <button onClick={() => store.updateTaskStatus(task.id, "in_progress")} className="rounded-lg border border-[#dcdcdc] px-3 py-2 text-sm font-medium">
               Start
             </button>
@@ -1111,6 +1171,15 @@ function InsightsPage({ data }: { data: DayBoardData }) {
   const total = data.tasks.length;
   const habitCompleted = data.habits.filter((habit) => habit.completedToday).length;
   const hasActivity = total > 0 || data.habits.length > 0 || data.events.length > 0;
+  const [focusedSeconds, setFocusedSeconds] = useState(0);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(async ({ data: auth }) => {
+      if (!auth.user) return;
+      const { data: sessions } = await supabase.from("focus_sessions").select("focused_seconds").eq("user_id", auth.user.id).eq("status", "completed");
+      setFocusedSeconds((sessions ?? []).reduce((sum, item) => sum + (item.focused_seconds ?? 0), 0));
+    });
+  }, []);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -1123,12 +1192,12 @@ function InsightsPage({ data }: { data: DayBoardData }) {
         ]}
         onChange={() => undefined}
       />
-      {hasActivity ? (
+      {hasActivity || focusedSeconds > 0 ? (
         <>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <InsightMetric title="Tasks Completed" value={`${completed} / ${total}`} />
             <InsightMetric title="Completion Rate" value={`${Math.round((completed / Math.max(total, 1)) * 100)}%`} />
-            <InsightMetric title="Focused Time" value="0h 0m" />
+            <InsightMetric title="Focused Time" value={formatDuration(Math.floor(focusedSeconds / 60))} />
             <InsightMetric title="Habits" value={`${habitCompleted} / ${data.habits.length}`} />
             <InsightMetric title="Workload" value="New" />
           </div>
@@ -1191,6 +1260,7 @@ function NotesPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
 
 function SettingsPage({ store, auth }: { store: ReturnType<typeof useDayBoardData>; auth: ReturnType<typeof useSupabaseAuth> }) {
   const displayName = auth.user?.user_metadata?.display_name || store.data.displayName;
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -1211,6 +1281,17 @@ function SettingsPage({ store, auth }: { store: ReturnType<typeof useDayBoardDat
             </Link>
           )}
         </div>
+      </SettingsSection>
+      <SettingsSection title="Appearance">
+        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Appearance">
+          <button onClick={() => setTheme("day")} role="radio" aria-checked={theme === "day"} className={cn("flex items-center justify-center gap-3 rounded-lg border px-4 py-4 font-medium", theme === "day" ? "border-black bg-black text-white" : "border-[#dcdcdc]")}>
+            <Sun className="h-5 w-5" /> Day
+          </button>
+          <button onClick={() => setTheme("night")} role="radio" aria-checked={theme === "night"} className={cn("flex items-center justify-center gap-3 rounded-lg border px-4 py-4 font-medium", theme === "night" ? "border-black bg-black text-white" : "border-[#dcdcdc]")}>
+            <Moon className="h-5 w-5" /> Night
+          </button>
+        </div>
+        <p className="mt-3 text-sm text-[#666]">Updates immediately and syncs to your other signed-in DayBoard displays.</p>
       </SettingsSection>
       <SettingsSection title="Dashboard">
         <ToggleRow label="Show Weather" checked />

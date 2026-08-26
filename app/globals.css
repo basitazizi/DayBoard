@@ -6,9 +6,19 @@
   --muted: #666666;
   --line: #e5e5e5;
   --soft: #fafafa;
+  --card: #ffffff;
   --danger: #ef4444;
   --progress: #3b82f6;
   --success: #16a34a;
+}
+
+:root[data-theme="night"] {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --muted: #a3a3a3;
+  --line: #2a2a2a;
+  --soft: #161616;
+  --card: #111111;
 }
 
 * {
@@ -40,6 +50,8 @@ input,
 select,
 textarea {
   font: inherit;
+  background: var(--card);
+  color: var(--foreground);
 }
 
 button {
@@ -53,17 +65,40 @@ a {
 
 .lcd-frame {
   min-height: 100dvh;
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    radial-gradient(circle at top left, rgba(0, 0, 0, 0.05), transparent 28%) border-box;
+  background: var(--background);
 }
 
 .card {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--card);
   transition: border-color 180ms ease;
 }
+
+:root[data-theme="night"] .bg-white,
+:root[data-theme="night"] .bg-white\/95 { background-color: var(--card) !important; }
+:root[data-theme="night"] .bg-\[\#fafafa\],
+:root[data-theme="night"] .bg-\[\#f4f4f4\],
+:root[data-theme="night"] .bg-\[\#f3f3f3\],
+:root[data-theme="night"] .bg-\[\#e8e8e8\],
+:root[data-theme="night"] .bg-\[\#e5e5e5\] { background-color: var(--soft) !important; }
+:root[data-theme="night"] .text-\[\#111111\],
+:root[data-theme="night"] .text-\[\#111\],
+:root[data-theme="night"] .text-black { color: var(--foreground) !important; }
+:root[data-theme="night"] .text-\[\#333\],
+:root[data-theme="night"] .text-\[\#444\],
+:root[data-theme="night"] .text-\[\#555\],
+:root[data-theme="night"] .text-\[\#666\],
+:root[data-theme="night"] .text-\[\#aaa\] { color: var(--muted) !important; }
+:root[data-theme="night"] .divide-\[\#e5e5e5\] > :not(:last-child) { border-color: var(--line) !important; }
+:root[data-theme="night"] [class*="border-[#e"],
+:root[data-theme="night"] [class*="border-[#d"] { border-color: var(--line) !important; }
+:root[data-theme="night"] .border-black { border-color: var(--foreground) !important; }
+:root[data-theme="night"] .bg-black { background-color: var(--foreground) !important; color: var(--background) !important; }
+:root[data-theme="night"] .text-white { color: var(--background) !important; }
+
+.focus-ring-track { stroke: var(--line); }
+.focus-ring-progress { stroke: var(--foreground); transition: stroke-dashoffset 0.8s linear; }
 
 .card:hover {
   border-color: #bfbfbf;
