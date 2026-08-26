@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "DayBoard",
@@ -20,7 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body><ThemeProvider>{children}</ThemeProvider></body>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
+      </body>
     </html>
   );
 }
