@@ -16,9 +16,13 @@ function dateKey(date: Date, timezone: string) {
   return `${value.year}-${value.month}-${value.day}`;
 }
 
-function nextDateKey(key: string) {
+function offsetDateKey(key: string, days: number) {
   const [year, month, day] = key.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function nextDateKey(key: string) {
+  return offsetDateKey(key, 1);
 }
 
 function safeTimezone(value: unknown) {
@@ -67,17 +71,19 @@ export async function POST(request: Request) {
   const now = new Date();
   const today = dateKey(now, timezone);
   const tomorrow = nextDateKey(today);
+  const lastSevenDaysStart = offsetDateKey(today, -6);
   const localTime = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
 
-  const [tasksResult, eventsResult, assignmentsResult, examsResult, coursesResult, habitsResult, logsResult, focusResult] = await Promise.all([
+  const [tasksResult, eventsResult, assignmentsResult, examsResult, coursesResult, habitsResult, logsResult, focusResult, notesResult] = await Promise.all([
     supabase.from("tasks").select("id,title,due_date,due_time,priority,status,estimated_minutes").eq("user_id", userId).neq("status", "completed").neq("status", "cancelled").order("due_date", { ascending: true, nullsFirst: false }).limit(50),
     supabase.from("events").select("title,event_date,start_time,end_time,all_day").eq("user_id", userId).gte("event_date", today).lte("event_date", tomorrow).order("event_date").order("start_time").limit(50),
-    supabase.from("assignments").select("title,course_id,due_date,due_time,status").eq("user_id", userId).neq("status", "submitted").neq("status", "graded").order("due_date", { ascending: true, nullsFirst: false }).limit(50),
+    supabase.from("assignments").select("title,course_id,due_date,due_time,status,estimated_minutes,grade_weight,difficulty").eq("user_id", userId).neq("status", "submitted").neq("status", "graded").order("due_date", { ascending: true, nullsFirst: false }).limit(50),
     supabase.from("exams").select("title,course_id,exam_date,exam_time").eq("user_id", userId).gte("exam_date", today).order("exam_date").limit(30),
     supabase.from("courses").select("id,code,name").eq("user_id", userId).limit(30),
     supabase.from("habits").select("id,name").eq("user_id", userId).eq("is_active", true).limit(50),
     supabase.from("habit_logs").select("habit_id").eq("user_id", userId).eq("log_date", today).eq("completed", true).limit(100),
-    supabase.from("focus_sessions").select("started_at,focused_seconds").eq("user_id", userId).order("started_at", { ascending: false }).limit(100)
+    supabase.from("focus_sessions").select("started_at,focused_seconds").eq("user_id", userId).order("started_at", { ascending: false }).limit(100),
+    supabase.from("notes").select("title,content,pinned,updated_at").eq("user_id", userId).order("pinned", { ascending: false }).order("updated_at", { ascending: false }).limit(8)
   ]);
 
   if (tasksResult.error || eventsResult.error) {
@@ -93,6 +99,7 @@ export async function POST(request: Request) {
   const habits = optionalData("Habits", habitsResult, warnings) as any[];
   const habitLogs = optionalData("Habit history", logsResult, warnings) as any[];
   const focusSessions = optionalData("Focus history", focusResult, warnings) as any[];
+  const notes = optionalData("Notes", notesResult, warnings) as any[];
   const courseMap = new Map(courses.map((course) => [course.id, `${course.code} - ${course.name}`]));
   const completedHabitIds = new Set(habitLogs.map((log) => log.habit_id));
 
@@ -111,10 +118,16 @@ export async function POST(request: Request) {
     localTime,
     tasks,
     events: (eventsResult.data ?? []).map((event: any) => ({ title: event.title, date: event.event_date, startTime: event.start_time?.slice(0, 5) ?? null, endTime: event.end_time?.slice(0, 5) ?? null, allDay: event.all_day ?? false })),
-    assignments: assignments.map((item) => ({ title: item.title, course: courseMap.get(item.course_id) ?? null, dueDate: item.due_date, dueTime: item.due_time?.slice(0, 5) ?? null, status: item.status })),
+    assignments: assignments.map((item) => ({ title: item.title, course: courseMap.get(item.course_id) ?? null, dueDate: item.due_date, dueTime: item.due_time?.slice(0, 5) ?? null, status: item.status, estimatedMinutes: item.estimated_minutes ?? 0, gradeWeight: item.grade_weight ?? null, difficulty: item.difficulty ?? null })),
     exams: exams.map((exam) => ({ title: exam.title, course: courseMap.get(exam.course_id) ?? null, date: exam.exam_date, time: exam.exam_time?.slice(0, 5) ?? null })),
     habits: habitsResult.error || logsResult.error ? null : { total: habits.length, completed: completedHabitIds.size, remaining: habits.filter((habit) => !completedHabitIds.has(habit.id)).map((habit) => habit.name) },
-    focusedMinutes: focusResult.error ? null : Math.floor(focusSessions.filter((session) => dateKey(new Date(session.started_at), timezone) === today).reduce((sum, session) => sum + (session.focused_seconds ?? 0), 0) / 60)
+    focusedMinutes: focusResult.error ? null : Math.floor(focusSessions.filter((session) => session.started_at && dateKey(new Date(session.started_at), timezone) === today).reduce((sum, session) => sum + (session.focused_seconds ?? 0), 0) / 60),
+    focusedMinutesWeek: focusResult.error ? null : Math.floor(focusSessions.filter((session) => {
+      if (!session.started_at) return false;
+      const key = dateKey(new Date(session.started_at), timezone);
+      return key >= lastSevenDaysStart && key <= today;
+    }).reduce((sum, session) => sum + (session.focused_seconds ?? 0), 0) / 60),
+    notes: notes.map((note) => ({ title: note.title, content: note.content?.slice(0, 240) ?? null, pinned: note.pinned ?? false, updatedAt: note.updated_at ?? null }))
   };
 
   return json(createLocalBrief(body.kind as LocalBriefKind, facts, warnings));

@@ -57,9 +57,10 @@ import { useDayBoardData } from "@/lib/local-data";
 import { useTheme } from "@/lib/theme";
 import { supabase } from "@/lib/supabase";
 import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
+import { getInsightSummary, type FocusSessionSummary } from "@/lib/insights";
 import { getGreeting } from "@/lib/time-logic";
 import { getTaskPriority, sortRelevantTasks } from "@/lib/task-priority";
-import type { CalendarEvent, CalendarView, DayBoardData, EventCategory, Habit, Task, TaskPriority } from "@/types/dayboard";
+import type { Assignment, CalendarEvent, CalendarView, DayBoardData, EventCategory, Habit, Task, TaskPriority } from "@/types/dayboard";
 import { AiBriefPanel } from "@/components/ai-brief-panel";
 
 type Screen = "dashboard" | "calendar" | "tasks" | "school" | "habits" | "insights" | "notes" | "settings" | "display";
@@ -105,6 +106,49 @@ function useNow() {
   }, []);
 
   return now;
+}
+
+function getLocalHour(date: Date, timezone: string) {
+  const hour = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "numeric",
+    hour12: false
+  }).format(date);
+  return Number(hour);
+}
+
+function isLocalNight(date: Date, timezone: string) {
+  const hour = getLocalHour(date, timezone);
+  return Number.isFinite(hour) && (hour < 6 || hour >= 18);
+}
+
+function TimeOfDayIcon({ now, timezone, className }: { now: Date; timezone: string; className: string }) {
+  return isLocalNight(now, timezone) ? <Moon className={className} strokeWidth={1.7} /> : <Sun className={className} strokeWidth={1.7} />;
+}
+
+function WeatherGlance({ now, timezone, compact = false }: { now: Date; timezone: string; compact?: boolean }) {
+  const night = isLocalNight(now, timezone);
+  const label = night ? "Clear" : "Sunny";
+
+  if (compact) {
+    return (
+      <div className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#e0e0e0] px-2.5 py-1.5 md:hidden" aria-label={`${label}, 72 degrees`}>
+        <TimeOfDayIcon now={now} timezone={timezone} className="h-4 w-4" />
+        <div className="text-sm font-semibold">72°</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-5">
+      <TimeOfDayIcon now={now} timezone={timezone} className="h-12 w-12" />
+      <div>
+        <div className="text-2xl font-semibold">72°</div>
+        <div className="text-base text-[#555]">{label}</div>
+        <div className="mt-1 text-sm text-[#555]">High 78° Low 63°</div>
+      </div>
+    </div>
+  );
 }
 
 export function DayBoardApp({ screen }: { screen: Screen }) {
@@ -252,10 +296,10 @@ function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-5">
-        <Sun className="h-12 w-12" strokeWidth={1.7} />
+        <TimeOfDayIcon now={now} timezone={data.timezone} className="h-12 w-12" />
         <div>
           <div className="text-2xl font-semibold">72°</div>
-          <div className="text-base text-[#555]">Sunny</div>
+          <div className="text-base text-[#555]">{isLocalNight(now, data.timezone) ? "Clear" : "Sunny"}</div>
           <div className="mt-1 text-sm text-[#555]">↑ 78° ↓ 63°</div>
         </div>
       </div>
@@ -375,7 +419,7 @@ function MobileDashboardHeader({
               <span>
                 {greetingLabel}
               </span>
-              <Sun className="h-5 w-5 shrink-0 md:h-6 md:w-6" strokeWidth={1.8} />
+              <TimeOfDayIcon now={now} timezone={data.timezone} className="h-5 w-5 shrink-0 md:h-6 md:w-6" />
             </div>
             <div className="mt-1 text-sm text-[#666] md:mt-2 md:text-base">{formatMobileDate(now, data.timezone)}</div>
           </div>
@@ -391,14 +435,14 @@ function MobileDashboardHeader({
           <Link href="/focus" className="inline-flex whitespace-nowrap rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-xs font-medium md:px-4 md:py-2 md:text-sm">Start Focus</Link>
           <button onClick={onAiBrief} className="inline-flex whitespace-nowrap rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-xs font-medium md:px-4 md:py-2 md:text-sm">AI Brief</button>
           <div className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#e0e0e0] px-2.5 py-1.5 md:hidden" aria-label="Sunny, 72 degrees">
-            <Sun className="h-4 w-4" strokeWidth={1.7} />
+            <TimeOfDayIcon now={now} timezone={data.timezone} className="h-4 w-4" />
             <div className="text-sm font-semibold">72Â°</div>
           </div>
         </div>
         <div className="mt-4 ml-auto hidden w-fit items-center gap-3 rounded-xl border border-[#e0e0e0] px-4 py-3 md:flex">
-          <Sun className="h-7 w-7" strokeWidth={1.7} />
+          <TimeOfDayIcon now={now} timezone={data.timezone} className="h-7 w-7" />
           <div className="text-2xl font-semibold">72°</div>
-          <div className="text-sm text-[#333]">Sunny</div>
+          <div className="text-sm text-[#333]">{isLocalNight(now, data.timezone) ? "Clear" : "Sunny"}</div>
         </div>
       </div>
     </header>
@@ -609,22 +653,19 @@ function WeekDots({ pattern }: { pattern: boolean[] }) {
 }
 
 function InsightsCard({ data }: { data: DayBoardData }) {
-  const total = data.tasks.length;
-  const completed = data.tasks.filter((task) => task.status === "completed").length;
-  const hasActivity = data.tasks.length > 0 || data.habits.length > 0 || data.events.length > 0;
-  const focusScore = Math.round((completed / Math.max(total, 1)) * 45 + 30);
-  const points = [25, 58, 44, 78, 43, 74, 35, 58, 66, 92, 73, 87];
+  const insights = getInsightSummary(data);
+  const hasActivity = data.tasks.length > 0 || data.habits.length > 0 || data.events.length > 0 || data.assignments.length > 0 || data.exams.length > 0;
 
   return (
     <article className="card min-h-[240px] overflow-hidden p-4 lg:min-h-0 lg:p-5">
       <CardHeader icon={<BarChart3 className="h-5 w-5 lg:h-7 lg:w-7" />} title="INSIGHTS" href="/insights" />
       {hasActivity ? (
         <>
-          <MetricRow label="Tasks Completed" value={`${completed} / ${total}`} />
-          <MetricRow label="Study Time" value="0h 0m" />
-          <MetricRow label="Gym Sessions" value="0 this week" />
-          <MetricRow label="Focus Score" value={`${focusScore}%`} />
-          <MiniChart points={points} />
+          <MetricRow label="Open Work" value={`${insights.activeTasks.length + insights.activeAssignments.length}`} />
+          <MetricRow label="Due Today" value={`${insights.completedDueTodayTasks.length} / ${insights.dueTodayTasks.length}`} />
+          <MetricRow label="Habits" value={`${insights.habitCompleted} / ${insights.habitTotal}`} />
+          <MetricRow label="Focus Score" value={`${insights.focusScore}%`} />
+          <MiniChart points={insights.weekWorkloadPoints} labels={insights.weekWorkloadLabels} ariaLabel="This week workload chart" />
         </>
       ) : (
         <EmptyState>Insights unlock after you add tasks, habits, or study sessions.</EmptyState>
@@ -680,25 +721,26 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MiniChart({ points }: { points: number[] }) {
+function MiniChart({ points, labels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], ariaLabel = "Weekly chart" }: { points: number[]; labels?: string[]; ariaLabel?: string }) {
   const width = 320;
   const height = 110;
-  const step = width / (points.length - 1);
-  const coords = points.map((value, index) => `${index * step},${height - (value / 100) * (height - 16) - 8}`).join(" ");
+  const safePoints = points.length > 1 ? points : [0, 0];
+  const step = width / (safePoints.length - 1);
+  const coords = safePoints.map((value, index) => `${index * step},${height - (value / 100) * (height - 16) - 8}`).join(" ");
 
   return (
     <div className="mt-3">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-24 w-full overflow-visible" role="img" aria-label="Weekly productivity line chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-24 w-full overflow-visible" role="img" aria-label={ariaLabel}>
         {[0, 25, 50, 75, 100].map((value) => (
           <line key={value} x1="0" x2={width} y1={height - (value / 100) * (height - 16) - 8} y2={height - (value / 100) * (height - 16) - 8} stroke="var(--line)" strokeWidth="1" />
         ))}
         <polyline points={coords} fill="none" stroke="var(--foreground)" strokeWidth="2.5" />
-        {points.map((value, index) => (
+        {safePoints.map((value, index) => (
           <circle key={index} cx={index * step} cy={height - (value / 100) * (height - 16) - 8} r="4" fill="var(--foreground)" />
         ))}
       </svg>
-      <div className="grid grid-cols-7 text-center text-xs font-medium">
-        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
+      <div className="grid text-center text-xs font-medium" style={{ gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))` }}>
+        {labels.map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
@@ -799,7 +841,7 @@ function InnerPageFrame({
       <section className="mobile-safe-bottom flex-1 px-3 py-3 lg:px-8 lg:py-5">
         {screen === "calendar" ? <CalendarPage store={store} now={now} /> : null}
         {screen === "tasks" ? <TasksPage store={store} now={now} /> : null}
-        {screen === "school" ? <SchoolPage data={store.data} /> : null}
+        {screen === "school" ? <SchoolPage store={store} /> : null}
         {screen === "habits" ? <HabitsPage store={store} /> : null}
         {screen === "insights" ? <InsightsPage data={store.data} /> : null}
         {screen === "notes" ? <NotesPage store={store} /> : null}
@@ -1095,7 +1137,8 @@ function TaskPageRow({ task, now, store }: { task: Task; now: Date; store: Retur
   );
 }
 
-function SchoolPage({ data }: { data: DayBoardData }) {
+function SchoolPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
+  const { data } = store;
   const [tab, setTab] = useState("classes");
 
   return (
@@ -1112,6 +1155,7 @@ function SchoolPage({ data }: { data: DayBoardData }) {
       />
       {tab === "classes" ? (
         <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {data.courses.length === 0 ? <EmptyState>No classes yet. Add one from the + menu.</EmptyState> : null}
           {data.courses.map((course) => (
             <article key={course.id} className="card p-5">
               <div className="text-xl font-semibold">{course.code}</div>
@@ -1129,7 +1173,7 @@ function SchoolPage({ data }: { data: DayBoardData }) {
           {data.assignments.map((assignment) => (
             <div key={assignment.id} className="p-5">
               <div className="text-lg font-semibold">
-                {data.courses.find((course) => course.id === assignment.courseId)?.code} - {assignment.title}
+                <AssignmentTitle assignment={assignment} data={data} store={store} />
               </div>
               <div className="mt-1 text-[#555]">Due {getRelativeDayLabel(assignment.dueDate)} • {formatTime(assignment.dueTime)}</div>
               <div className="mt-1 text-[#555]">Estimated {formatDuration(assignment.estimatedMinutes)} • Weight {assignment.gradeWeight ?? "?"}%</div>
@@ -1156,6 +1200,23 @@ function SchoolPage({ data }: { data: DayBoardData }) {
         </div>
       ) : null}
       {tab === "grades" ? <div className="mt-5 card p-8 text-[#666]">Grade tracking is ready for the next phase.</div> : null}
+    </div>
+  );
+}
+
+function AssignmentTitle({ assignment, data, store }: { assignment: Assignment; data: DayBoardData; store: ReturnType<typeof useDayBoardData> }) {
+  const courseCode = data.courses.find((course) => course.id === assignment.courseId)?.code;
+  const isDone = assignment.status === "submitted" || assignment.status === "graded";
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span>{courseCode ? `${courseCode} - ${assignment.title}` : assignment.title}</span>
+      <button
+        onClick={() => store.updateAssignmentStatus(assignment.id, isDone ? "not_started" : "submitted")}
+        className={cn("rounded-lg px-3 py-1.5 text-sm font-medium", isDone ? "border border-[#dcdcdc]" : "bg-black text-white")}
+      >
+        {isDone ? "Mark Active" : "Mark Submitted"}
+      </button>
     </div>
   );
 }
@@ -1187,17 +1248,25 @@ function HabitsPage({ store }: { store: ReturnType<typeof useDayBoardData> }) {
 }
 
 function InsightsPage({ data }: { data: DayBoardData }) {
-  const completed = data.tasks.filter((task) => task.status === "completed").length;
-  const total = data.tasks.length;
-  const habitCompleted = data.habits.filter((habit) => habit.completedToday).length;
-  const hasActivity = total > 0 || data.habits.length > 0 || data.events.length > 0;
-  const [focusedSeconds, setFocusedSeconds] = useState(0);
+  const hasActivity = data.tasks.length > 0 || data.habits.length > 0 || data.events.length > 0 || data.assignments.length > 0 || data.exams.length > 0;
+  const [focusSessions, setFocusSessions] = useState<FocusSessionSummary[]>([]);
+  const insights = useMemo(() => getInsightSummary(data, focusSessions), [data, focusSessions]);
 
   useEffect(() => {
     void supabase.auth.getUser().then(async ({ data: auth }) => {
       if (!auth.user) return;
-      const { data: sessions } = await supabase.from("focus_sessions").select("focused_seconds").eq("user_id", auth.user.id).eq("status", "completed");
-      setFocusedSeconds((sessions ?? []).reduce((sum, item) => sum + (item.focused_seconds ?? 0), 0));
+      const { data: sessions, error } = await supabase
+        .from("focus_sessions")
+        .select("started_at,focused_seconds")
+        .eq("user_id", auth.user.id)
+        .eq("status", "completed")
+        .order("started_at", { ascending: false })
+        .limit(200);
+      if (error) {
+        console.warn("Could not load focus history for insights", error.message);
+        return;
+      }
+      setFocusSessions((sessions ?? []).map((session) => ({ startedAt: session.started_at ?? null, focusedSeconds: session.focused_seconds ?? 0 })));
     });
   }, []);
 
@@ -1212,23 +1281,48 @@ function InsightsPage({ data }: { data: DayBoardData }) {
         ]}
         onChange={() => undefined}
       />
-      {hasActivity || focusedSeconds > 0 ? (
+      {hasActivity || insights.focusedMinutesWeek > 0 ? (
         <>
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <InsightMetric title="Tasks Completed" value={`${completed} / ${total}`} />
-            <InsightMetric title="Completion Rate" value={`${Math.round((completed / Math.max(total, 1)) * 100)}%`} />
-            <InsightMetric title="Focused Time" value={formatDuration(Math.floor(focusedSeconds / 60))} />
-            <InsightMetric title="Habits" value={`${habitCompleted} / ${data.habits.length}`} />
-            <InsightMetric title="Workload" value="New" />
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <InsightMetric title="Focus Score" value={`${insights.focusScore}%`} />
+            <InsightMetric title="Status" value={insights.focusScoreLabel} />
+            <InsightMetric title="Due Today" value={`${insights.completedDueTodayTasks.length} / ${insights.dueTodayTasks.length}`} />
+            <InsightMetric title="Focused Today" value={formatDuration(insights.focusedMinutesToday)} />
+            <InsightMetric title="Habits" value={`${insights.habitCompleted} / ${insights.habitTotal}`} />
+            <InsightMetric title="Workload" value={insights.workloadLabel} />
           </div>
           <div className="mt-5 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
             <article className="card p-6">
-              <h2 className="text-xl font-semibold">Productivity Chart</h2>
-              <MiniChart points={[0, 0, 0, 0, 0, 0, 0]} />
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold">Week Workload</h2>
+                  <p className="mt-1 text-sm text-[#666]">{formatDuration(insights.workloadMinutesWeek)} planned this week.</p>
+                </div>
+                <div className="text-sm font-medium">{formatDuration(insights.workloadMinutesToday)} today/tomorrow</div>
+              </div>
+              <MiniChart points={insights.weekWorkloadPoints} labels={insights.weekWorkloadLabels} ariaLabel="This week workload chart" />
             </article>
             <article className="card p-6">
-              <h2 className="text-xl font-semibold">Important This Week</h2>
-              <EmptyState>Important tasks, assignments, and exams will appear here.</EmptyState>
+              <h2 className="text-xl font-semibold">Highest Risk</h2>
+              <InsightList items={insights.topRisks} empty="No risky items right now." />
+            </article>
+          </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <article className="card p-6">
+              <h2 className="text-xl font-semibold">Today</h2>
+              <MetricRow label="Events" value={`${insights.todayEvents}`} />
+              <MetricRow label="Open tasks" value={`${insights.activeTasks.length}`} />
+              <MetricRow label="Overdue" value={`${insights.overdueTasks.length + insights.overdueAssignments.length}`} />
+            </article>
+            <article className="card p-6">
+              <h2 className="text-xl font-semibold">School</h2>
+              <MetricRow label="Active assignments" value={`${insights.activeAssignments.length}`} />
+              <MetricRow label="Due soon" value={`${insights.dueSoonAssignments.length}`} />
+              <MetricRow label="Upcoming exams" value={`${insights.upcomingExams.length}`} />
+            </article>
+            <article className="card p-6">
+              <h2 className="text-xl font-semibold">Next Actions</h2>
+              <InsightList items={insights.suggestions.slice(0, 4)} empty="No specific action needed yet." />
             </article>
           </div>
         </>
@@ -1237,6 +1331,20 @@ function InsightsPage({ data }: { data: DayBoardData }) {
           <EmptyState>Add tasks, habits, assignments, or exams to start building insights.</EmptyState>
         </div>
       )}
+    </div>
+  );
+}
+
+function InsightList({ items, empty }: { items: string[]; empty: string }) {
+  if (items.length === 0) return <EmptyState>{empty}</EmptyState>;
+
+  return (
+    <div className="mt-4 divide-y divide-[#e5e5e5]">
+      {items.map((item) => (
+        <div key={item} className="py-3 text-sm font-medium leading-6 first:pt-0 last:pb-0">
+          {item}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1418,7 +1526,7 @@ function SegmentedControl({ value, options, onChange }: { value: string; options
 }
 
 function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () => void; store: ReturnType<typeof useDayBoardData> }) {
-  const [kind, setKind] = useState<"menu" | "task" | "event" | "habit" | "note" | "assignment" | "exam">("menu");
+  const [kind, setKind] = useState<"menu" | "task" | "event" | "habit" | "note" | "course" | "assignment" | "exam">("menu");
 
   useEffect(() => {
     if (open) setKind("menu");
@@ -1439,11 +1547,13 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
                   ? "Add Event"
                   : kind === "habit"
                     ? "Add Habit"
-                    : kind === "assignment"
-                      ? "Add Assignment"
-                      : kind === "exam"
-                        ? "Add Exam"
-                        : "Add Note"}
+                    : kind === "course"
+                      ? "Add Class"
+                      : kind === "assignment"
+                        ? "Add Assignment"
+                        : kind === "exam"
+                          ? "Add Exam"
+                          : "Add Note"}
           </h2>
           <button onClick={onClose} className="rounded-lg border border-[#dcdcdc] p-1.5 lg:p-2" aria-label="Close">
             <X className="h-4 w-4 lg:h-5 lg:w-5" />
@@ -1455,6 +1565,7 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
             <QuickOption icon={<CalendarDays />} title="Event" detail="Add to calendar" onClick={() => setKind("event")} />
             <QuickOption icon={<Target />} title="Habit" detail="Track a habit" onClick={() => setKind("habit")} />
             <QuickOption icon={<FileText />} title="Note" detail="Quick note" onClick={() => setKind("note")} />
+            <QuickOption icon={<GraduationCap />} title="Class" detail="Add your own class" onClick={() => setKind("course")} />
             <QuickOption icon={<GraduationCap />} title="Assignment" detail="Add school work" onClick={() => setKind("assignment")} />
             <QuickOption icon={<AlarmClock />} title="Exam" detail="Add important exam" onClick={() => setKind("exam")} />
           </div>
@@ -1463,6 +1574,7 @@ function QuickAddSheet({ open, onClose, store }: { open: boolean; onClose: () =>
         {kind === "event" ? <EventForm store={store} onDone={onClose} /> : null}
         {kind === "habit" ? <HabitForm store={store} onDone={onClose} /> : null}
         {kind === "note" ? <NoteForm store={store} onDone={onClose} /> : null}
+        {kind === "course" ? <CourseForm store={store} onDone={onClose} /> : null}
         {kind === "assignment" ? <AssignmentForm store={store} onDone={onClose} /> : null}
         {kind === "exam" ? <ExamForm store={store} onDone={onClose} /> : null}
       </div>
@@ -1713,8 +1825,58 @@ function NoteForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
   );
 }
 
+function defaultSemester() {
+  const now = new Date();
+  const month = now.getMonth();
+  const term = month < 5 ? "Spring" : month < 7 ? "Summer" : "Fall";
+  return `${term} ${now.getFullYear()}`;
+}
+
+function CourseForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>; onDone: () => void }) {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [days, setDays] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [room, setRoom] = useState("");
+  const [semester, setSemester] = useState(defaultSemester());
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!code.trim() || !name.trim()) return;
+
+    store.addCourse({
+      code: code.trim().toUpperCase(),
+      name: name.trim(),
+      days: days.trim(),
+      startTime,
+      endTime,
+      room: room.trim(),
+      semester: semester.trim()
+    });
+    onDone();
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-3">
+      <TextInput label="Class Code" value={code} onChange={setCode} autoFocus />
+      <TextInput label="Class Name" value={name} onChange={setName} />
+      <TextInput label="Days" value={days} onChange={setDays} />
+      <div className="grid grid-cols-2 gap-3">
+        <TextInput label="Start Time" value={startTime} onChange={setStartTime} type="time" />
+        <TextInput label="End Time" value={endTime} onChange={setEndTime} type="time" />
+      </div>
+      <TextInput label="Room" value={room} onChange={setRoom} />
+      <TextInput label="Semester" value={semester} onChange={setSemester} />
+      <button className="mt-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white lg:py-3 lg:text-base">Save Class</button>
+    </form>
+  );
+}
+
 function AssignmentForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>; onDone: () => void }) {
   const firstCourse = store.data.courses[0]?.id ?? "";
+  const courseOptions = store.data.courses.length > 0 ? store.data.courses.map((course) => course.id) : [""];
+  const courseLabels = store.data.courses.length > 0 ? Object.fromEntries(store.data.courses.map((course) => [course.id, `${course.code} - ${course.name}`])) : { "": "No class" };
   const [courseId, setCourseId] = useState(firstCourse);
   const [title, setTitle] = useState("");
   const [assignmentType, setAssignmentType] = useState("homework");
@@ -1761,7 +1923,7 @@ function AssignmentForm({ store, onDone }: { store: ReturnType<typeof useDayBoar
 
   return (
     <form onSubmit={submit} className="grid gap-3">
-      <Select label="Course" value={courseId} onChange={setCourseId} options={store.data.courses.map((course) => course.id)} labels={Object.fromEntries(store.data.courses.map((course) => [course.id, `${course.code} - ${course.name}`]))} />
+      <Select label="Course" value={courseId} onChange={setCourseId} options={courseOptions} labels={courseLabels} />
       <TextInput label="Assignment Title" value={title} onChange={setTitle} autoFocus />
       <Select label="Type" value={assignmentType} onChange={setAssignmentType} options={["homework", "quiz", "project", "lab", "paper", "midterm", "final", "other"]} />
       <div className="grid grid-cols-2 gap-3">
@@ -1784,6 +1946,8 @@ function AssignmentForm({ store, onDone }: { store: ReturnType<typeof useDayBoar
 
 function ExamForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>; onDone: () => void }) {
   const firstCourse = store.data.courses[0]?.id ?? "";
+  const courseOptions = store.data.courses.length > 0 ? store.data.courses.map((course) => course.id) : [""];
+  const courseLabels = store.data.courses.length > 0 ? Object.fromEntries(store.data.courses.map((course) => [course.id, `${course.code} - ${course.name}`])) : { "": "No class" };
   const [courseId, setCourseId] = useState(firstCourse);
   const [title, setTitle] = useState("");
   const [examDate, setExamDate] = useState(todayKey());
@@ -1827,7 +1991,7 @@ function ExamForm({ store, onDone }: { store: ReturnType<typeof useDayBoardData>
 
   return (
     <form onSubmit={submit} className="grid gap-3">
-      <Select label="Course" value={courseId} onChange={setCourseId} options={store.data.courses.map((course) => course.id)} labels={Object.fromEntries(store.data.courses.map((course) => [course.id, `${course.code} - ${course.name}`]))} />
+      <Select label="Course" value={courseId} onChange={setCourseId} options={courseOptions} labels={courseLabels} />
       <TextInput label="Exam Name" value={title} onChange={setTitle} autoFocus />
       <div className="grid grid-cols-2 gap-3">
         <TextInput label="Exam Date" value={examDate} onChange={setExamDate} type="date" />

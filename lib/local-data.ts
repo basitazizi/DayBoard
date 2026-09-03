@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Assignment, CalendarEvent, DayBoardData, Exam, Habit, HabitLog, Note, Task } from "@/types/dayboard";
+import type { Assignment, CalendarEvent, Course, DayBoardData, Exam, Habit, HabitLog, Note, Task } from "@/types/dayboard";
 import { formatTime, getLocalDateKey } from "./date-utils";
 import { seedData } from "./seed-data";
 import { calculateHabitStreak, calculateHabitWeekPattern } from "./streaks";
@@ -150,6 +150,17 @@ function formatCourseTime(startTime: string | null, endTime: string | null) {
   return `${formatTime(timeValue(startTime))}-${formatTime(timeValue(endTime))}`;
 }
 
+function mapCourse(row: DbCourse): Course {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    days: row.days ?? "To be announced",
+    time: formatCourseTime(row.start_time, row.end_time),
+    room: row.room ?? "TBA"
+  };
+}
+
 function mapTask(row: DbTask): Task {
   return {
     id: row.id,
@@ -224,9 +235,11 @@ function applyHabitLogState(habits: Habit[], logs: HabitLog[], timezone: string)
 }
 
 function buildUpcoming(assignments: Assignment[], exams: Exam[]) {
+  const today = getLocalDateKey(new Date(), seedData.timezone);
+
   return [
     ...assignments
-      .filter((assignment) => assignment.dueDate && assignment.status !== "submitted" && assignment.status !== "graded")
+      .filter((assignment) => assignment.dueDate >= today && assignment.status !== "submitted" && assignment.status !== "graded")
       .map((assignment) => ({
         id: `up-assignment-${assignment.id}`,
         title: assignment.title,
@@ -235,14 +248,16 @@ function buildUpcoming(assignments: Assignment[], exams: Exam[]) {
         kind: "assignment" as const,
         importance: 70 + Math.min((assignment.gradeWeight ?? 0) * 2, 25)
       })),
-    ...exams.map((exam) => ({
-      id: `up-exam-${exam.id}`,
-      title: exam.title,
-      date: exam.examDate,
-      timeLabel: exam.examTime ? formatTime(exam.examTime) : "Exam",
-      kind: "exam" as const,
-      importance: 90 + Math.min(exam.gradeWeight ?? 0, 10)
-    }))
+    ...exams
+      .filter((exam) => exam.examDate >= today)
+      .map((exam) => ({
+        id: `up-exam-${exam.id}`,
+        title: exam.title,
+        date: exam.examDate,
+        timeLabel: exam.examTime ? formatTime(exam.examTime) : "Exam",
+        kind: "exam" as const,
+        importance: 90 + Math.min(exam.gradeWeight ?? 0, 10)
+      }))
   ].sort((a, b) => a.date.localeCompare(b.date) || b.importance - a.importance);
 }
 
@@ -274,18 +289,7 @@ async function loadSupabaseData(userId: string | null): Promise<DayBoardData> {
 
   const tasks = ((tasksResult.data ?? []) as DbTask[]).map(mapTask);
   const events = ((eventsResult.data ?? []) as DbEvent[]).map(mapEvent);
-  const dbCourses = (coursesResult.data ?? []) as DbCourse[];
-  const courses =
-    dbCourses.length > 0
-      ? dbCourses.map((course) => ({
-          id: course.id,
-          code: course.code,
-          name: course.name,
-          days: course.days ?? "To be announced",
-          time: formatCourseTime(course.start_time, course.end_time),
-          room: course.room ?? "TBA"
-        }))
-      : seedData.courses;
+  const courses = ((coursesResult.data ?? []) as DbCourse[]).map(mapCourse);
   const assignments = ((assignmentsResult.data ?? []) as DbAssignment[]).map(mapAssignment);
   const exams = ((examsResult.data ?? []) as DbExam[]).map((exam) => ({
     id: exam.id,
@@ -587,6 +591,43 @@ export function useDayBoardData() {
             });
         });
       },
+      addCourse: (course: Omit<Course, "id" | "time"> & { startTime?: string; endTime?: string; semester?: string }) => {
+        const optimisticCourse: Course = {
+          id: `course-${crypto.randomUUID()}`,
+          code: course.code,
+          name: course.name,
+          days: course.days || "To be announced",
+          time: course.startTime && course.endTime ? `${formatTime(course.startTime)}-${formatTime(course.endTime)}` : "To be announced",
+          room: course.room || "TBA"
+        };
+
+        setData((current) => ({
+          ...current,
+          courses: [...current.courses, optimisticCourse].sort((a, b) => a.code.localeCompare(b.code))
+        }));
+
+        void insertForCurrentUser<DbCourse>(
+          "courses",
+          {
+            code: course.code,
+            name: course.name,
+            days: course.days || null,
+            start_time: course.startTime || null,
+            end_time: course.endTime || null,
+            room: course.room || null,
+            semester: course.semester || null
+          },
+          mapCourse
+        ).then((savedCourse) => {
+          if (!savedCourse) return;
+          setData((current) => ({
+            ...current,
+            courses: current.courses
+              .map((item) => (item.id === optimisticCourse.id ? (savedCourse as Course) : item))
+              .sort((a, b) => a.code.localeCompare(b.code))
+          }));
+        });
+      },
       addAssignment: (assignment: Omit<Assignment, "id" | "actualMinutes" | "status">) => {
         const optimisticAssignment: Assignment = {
           ...assignment,
@@ -629,6 +670,29 @@ export function useDayBoardData() {
               upcoming: buildUpcoming(assignments, current.exams)
             };
           });
+        });
+      },
+      updateAssignmentStatus: (assignmentId: string, status: Assignment["status"]) => {
+        setData((current) => {
+          const assignments = current.assignments.map((assignment) => (assignment.id === assignmentId ? { ...assignment, status } : assignment));
+          return {
+            ...current,
+            assignments,
+            upcoming: buildUpcoming(assignments, current.exams)
+          };
+        });
+
+        void getCurrentUserId().then((currentUserId) => {
+          if (!currentUserId) return;
+
+          void supabase
+            .from("assignments")
+            .update({ status })
+            .eq("id", assignmentId)
+            .eq("user_id", currentUserId)
+            .then(({ error }) => {
+              if (error) console.warn("Could not update assignment in Supabase", error.message);
+            });
         });
       },
       addExam: (exam: Omit<Exam, "id" | "studyMinutesCompleted" | "importanceScore">) => {
