@@ -30,7 +30,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   secondary: "border border-line bg-surface text-ink hover:bg-surface-2",
   ghost: "text-ink-2 hover:bg-track hover:text-ink",
   dark: "bg-ink text-bg hover:opacity-90",
-  hero: "bg-white text-[#3b2fd0] hover:bg-white/90",
+  hero: "bg-white text-[var(--hero-from)] hover:bg-white/90",
   heroGhost: "bg-white/15 text-white hover:bg-white/25",
   danger: "border border-line bg-surface text-rose hover:bg-rose-soft"
 };

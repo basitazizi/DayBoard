@@ -25,6 +25,10 @@ export function useActiveFocusSession() {
   const refresh = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
+      try {
+        const local = JSON.parse(localStorage.getItem("dayboard-focus-session") ?? "null") as FocusSession | null;
+        setSession(local?.user_id === "local" && local.status !== "completed" ? local : null);
+      } catch { setSession(null); }
       setLoading(false);
       return;
     }
@@ -41,6 +45,10 @@ export function useActiveFocusSession() {
   }, []);
 
   useEffect(() => {
+    const onChange = () => void refresh();
+    window.addEventListener("dayboard:focus-changed", onChange);
+    window.addEventListener("storage", onChange);
+    void refresh();
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     void supabase.auth.getUser().then(({ data }) => {
@@ -57,6 +65,8 @@ export function useActiveFocusSession() {
     });
     return () => {
       cancelled = true;
+      window.removeEventListener("dayboard:focus-changed", onChange);
+      window.removeEventListener("storage", onChange);
       if (channel) void supabase.removeChannel(channel);
     };
   }, [refresh]);

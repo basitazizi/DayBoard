@@ -325,7 +325,7 @@ function PageSkeleton() {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppProvider>
-      <div className="flex min-h-dvh bg-bg text-ink">
+      <div data-app-shell className="flex min-h-dvh bg-bg text-ink">
         <Sidebar />
         <div className="flex min-h-dvh min-w-0 flex-1 flex-col pb-[76px] lg:pb-0">{children}</div>
         <MobileNav />

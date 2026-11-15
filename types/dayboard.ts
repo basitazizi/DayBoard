@@ -117,6 +117,7 @@ export interface Course {
 }
 
 export interface Assignment {
+  steps?: TaskStep[];
   id: string;
   courseId: string;
   title: string;

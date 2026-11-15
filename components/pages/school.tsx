@@ -10,6 +10,7 @@ import { getCourseGrade, getWorkItems } from "@/lib/work";
 import type { Assignment, Course, Exam, Tone } from "@/types/dayboard";
 import { useApp } from "../app-context";
 import { Page } from "../app-shell";
+import { WorkDetail } from "./tasks";
 import { kindIcon } from "../shared";
 import { Button, Card, CardHeader, Chip, EmptyState, Field, IconTile, Label, ProgressBar, Row, Segmented, SelectInput, Sheet, TextInput, TONE } from "../ui";
 
@@ -21,6 +22,7 @@ export function SchoolPage() {
   const data = store.data;
   const today = getLocalDateKey(now, data.timezone);
   const [tab, setTab] = useState<Tab>("overview");
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   const grades = useMemo(() => new Map(data.courses.map((course) => [course.id, getCourseGrade(data, course.id)])), [data]);
@@ -89,7 +91,7 @@ export function SchoolPage() {
         <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
           <Card>
             <CardHeader title="Assignments" action={<Chip>{openAssignments.length} open</Chip>} />
-            <AssignmentList items={openAssignments.slice(0, 6)} empty="Nothing open. Enjoy it." />
+            <AssignmentList onSelect={setSelectedAssignment} items={openAssignments.slice(0, 6)} empty="Nothing open. Enjoy it." />
           </Card>
           <div className="grid content-start gap-5">
             {nextExam ? <NextExamCard exam={nextExam} today={today} /> : null}
@@ -114,7 +116,7 @@ export function SchoolPage() {
       {tab === "assignments" ? (
         <Card>
           <CardHeader title="All assignments" />
-          <AssignmentList items={[...data.assignments].sort((a, b) => Number(a.status === "submitted" || a.status === "graded") - Number(b.status === "submitted" || b.status === "graded") || a.dueDate.localeCompare(b.dueDate))} empty="No assignments yet." detailed />
+          <AssignmentList onSelect={setSelectedAssignment} items={[...data.assignments].sort((a, b) => Number(a.status === "submitted" || a.status === "graded") - Number(b.status === "submitted" || b.status === "graded") || a.dueDate.localeCompare(b.dueDate))} empty="No assignments yet." detailed />
         </Card>
       ) : null}
 
@@ -125,6 +127,9 @@ export function SchoolPage() {
         </Card>
       ) : null}
 
+      <Sheet open={Boolean(selectedAssignment)} onClose={() => setSelectedAssignment(null)} title="Assignment details">
+        {getWorkItems(data, now).filter((item) => item.kind === "assignment" && item.id === selectedAssignment).map((item) => <WorkDetail key={item.id} item={item} onDeleted={() => setSelectedAssignment(null)} />)}
+      </Sheet>
       {editingCourse ? <CourseSheet course={editingCourse} onClose={() => setEditingCourse(null)} /> : null}
     </Page>
   );
@@ -208,7 +213,7 @@ function NextExamCard({ exam, today }: { exam: Exam; today: string }) {
   );
 }
 
-function AssignmentList({ items, empty, detailed }: { items: Assignment[]; empty: string; detailed?: boolean }) {
+function AssignmentList({ items, empty, detailed, onSelect }: { items: Assignment[]; empty: string; detailed?: boolean; onSelect: (id: string) => void }) {
   const { store, now } = useApp();
   const today = getLocalDateKey(now, store.data.timezone);
   if (!items.length) return <p className="py-3 text-sm text-ink-2">{empty}</p>;
@@ -250,6 +255,8 @@ function AssignmentList({ items, empty, detailed }: { items: Assignment[]; empty
             ) : (
               <ProgressBar value={finished ? 100 : item.status === "in_progress" ? 50 : 0} tone={course?.color ?? "accent"} className="hidden w-24 sm:block" label={`${item.title} progress`} />
             )}
+            <Button size="sm" onClick={() => onSelect(item.id)}>Steps</Button>
+            <button type="button" aria-label={`Delete ${item.title}`} onClick={() => store.deleteAssignment(item.id)} className="text-ink-3 hover:text-rose"><Trash2 className="h-4 w-4" /></button>
             <Chip tone={finished ? "neutral" : distance !== null && distance <= 0 ? "rose" : distance !== null && distance <= 2 ? "amber" : "neutral"}>{finished ? (item.score !== undefined ? `${item.score}%` : "Done") : item.dueDate ? getRelativeDayLabel(item.dueDate, today) : "No date"}</Chip>
           </Row>
         );

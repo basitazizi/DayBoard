@@ -128,10 +128,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyTheme(next);
     };
     media.addEventListener("change", onSystemChange);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === PREFS_KEY || event.key === null) {
+        const next = readPrefs(); setPrefsState(next); applyPrefs(next);
+      }
+      if (event.key === MODE_KEY || event.key === THEME_KEY || event.key === null) {
+        const saved = localStorage.getItem(MODE_KEY);
+        const nextMode: ThemeMode = saved === "auto" || saved === "night" ? saved : "day";
+        const resolved = nextMode === "auto" ? systemTheme() : nextMode;
+        setModeState(nextMode); setThemeState(resolved); applyTheme(resolved);
+      }
+    };
+    window.addEventListener("storage", onStorage);
 
     return () => {
       listener.subscription.unsubscribe();
       media.removeEventListener("change", onSystemChange);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 

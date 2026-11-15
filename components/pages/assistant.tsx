@@ -7,6 +7,8 @@ import { askAssistant, prepareImage, useAssistantStatus, type AssistantImage, ty
 import { cn } from "@/lib/cn";
 import { applyDrafts, describeResult, type DraftChange, type DraftItem } from "@/lib/drafts";
 import { useTheme } from "@/lib/theme";
+import { useSpokenReply } from "@/lib/use-spoken-reply";
+import { useFocusHistory } from "@/lib/focus-history";
 import { useSpeech } from "@/lib/use-speech";
 import { useApp } from "../app-context";
 import { Page } from "../app-shell";
@@ -49,19 +51,25 @@ export function AssistantPage() {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  const spoken = useSpokenReply();
+  const [talkBack, setTalkBack] = useState(false);
+  const { sessions: focusHistory } = useFocusHistory();
   const speech = useSpeech((finalText) => setInput(finalText));
   const fullAssistant = Boolean(cloudEnabled && auth.user);
 
   async function send(text: string, image?: AssistantImage) {
     const question = text.trim() || (image ? "Add everything from this photo." : "");
     if (!question || busy) return;
+    spoken.stop();
+    speech.stop();
     const userMessage: Message = { id: crypto.randomUUID(), role: "user", text: question, hasPhoto: Boolean(image) };
     const history: ChatTurn[] = [...messagesRef.current, userMessage].map((message) => ({ role: message.role, content: message.text }));
     setMessages((current) => [...current, userMessage]);
     setInput("");
     setBusy(true);
-    const result = await askAssistant(history, store.data, { cloudEnabled: Boolean(cloudEnabled), image, includeNotes, mode: image ? "extract" : "chat" });
+    const result = await askAssistant(history, store.data, { cloudEnabled: Boolean(cloudEnabled), image, includeNotes, focusHistory, mode: image ? "extract" : "chat" });
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: result.text, drafts: result.drafts?.length ? result.drafts : undefined, changes: result.changes?.length ? result.changes : undefined, source: result.source, note: result.error }]);
+    if (talkBack) spoken.speak(result.text);
     setBusy(false);
   }
 
@@ -122,6 +130,7 @@ export function AssistantPage() {
                   </IconTile>
                   <div className="min-w-0 flex-1 rounded-[18px] rounded-tl-[5px] bg-bg px-4 py-3.5">
                     <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                    {spoken.supported ? <Button size="sm" variant="ghost" onClick={() => spoken.speaking ? spoken.stop() : spoken.speak(message.text)}>{spoken.speaking ? "Stop voice" : "Read aloud"}</Button> : null}
                     {message.note ? <p className="mt-2 text-[13px] text-ink-3">{message.note}</p> : null}
                     {(message.drafts || message.changes) && !message.applied ? (
                       <div className="mt-3">
@@ -160,6 +169,15 @@ export function AssistantPage() {
             <div ref={endRef} />
           </div>
 
+          {spoken.supported ? <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+            <Button size="sm" onClick={() => { setTalkBack(!talkBack); spoken.stop(); }} aria-pressed={talkBack}>{talkBack ? "Talk back on" : "Text replies"}</Button>
+            <select aria-label="Assistant voice" value={spoken.voiceURI} onChange={(event) => spoken.setVoiceURI(event.target.value)} className="min-w-0 max-w-64 rounded-lg border border-line bg-surface p-2 text-ink">
+              <option value="">Best available device voice</option>
+              {spoken.voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} ({voice.lang})</option>)}
+            </select>
+            <span className="text-xs text-ink-3">Device speech; quality depends on installed voices.</span>
+            {spoken.error ? <span role="status">{spoken.error}</span> : null}
+          </div> : null}
           <form
             onSubmit={(event) => {
               event.preventDefault();

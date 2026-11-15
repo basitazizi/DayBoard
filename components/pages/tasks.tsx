@@ -155,7 +155,7 @@ function WorkRow({ item, selected, onSelect }: { item: WorkItem; selected: boole
   );
 }
 
-function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void }) {
+export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void }) {
   const { store, showToast, now } = useApp();
   const data = store.data;
   const today = getLocalDateKey(now, data.timezone);
@@ -166,12 +166,14 @@ function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void
 
   function setSteps(steps: TaskStep[]) {
     if (task) store.updateTask(task.id, { steps });
+    if (assignment) store.updateAssignment(assignment.id, { steps });
   }
 
   function breakDown() {
-    if (!task) return;
-    const kind = /\b(exam|midterm|final|test|quiz)\b/i.test(task.title) ? "exam" : /\b(essay|paper|report)\b/i.test(task.title) ? "paper" : /\bproject\b/i.test(task.title) ? "project" : /\blab\b/i.test(task.title) ? "lab" : "general";
-    const steps = defaultSteps(kind, Math.max(task.estimatedMinutes, 90));
+    const work = task ?? assignment;
+    if (!work) return;
+    const kind = /\b(exam|midterm|final|test|quiz)\b/i.test(work.title) ? "exam" : /\b(essay|paper|report)\b/i.test(work.title) ? "paper" : /\bproject\b/i.test(work.title) ? "project" : /\blab\b/i.test(work.title) ? "lab" : "general";
+    const steps = defaultSteps(kind, Math.max(work.estimatedMinutes, 90));
     setSteps(steps);
   }
 
@@ -212,7 +214,7 @@ function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void
         </p>
       </div>
 
-      {task ? (
+      {task || assignment ? (
         <>
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -253,6 +255,7 @@ function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void
             </form>
           </div>
 
+          {task ? <>
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <Label>Planned sessions</Label>
@@ -289,6 +292,7 @@ function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void
               </SelectInput>
             </Field>
           </div>
+          </> : null}
         </>
       ) : null}
 

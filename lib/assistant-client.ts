@@ -7,6 +7,7 @@ import { addDays, getLocalDateKey, timeFromMinutes } from "./date-utils";
 import type { DraftChange, DraftItem, DraftKind } from "./drafts";
 import { answerLocally, type AssistantReply } from "./local-assistant";
 import { findFreeSlots } from "./planner";
+import type { FocusHistoryEntry } from "./focus-history";
 import { supabase } from "./supabase";
 import { getCourseGrade, getWorkItems } from "./work";
 
@@ -47,7 +48,7 @@ export function useAssistantStatus() {
 }
 
 /** A compact snapshot of the person's data for the assistant to reason over. */
-export function buildAssistantContext(data: DayBoardData, options: { includeNotes?: boolean } = {}, now = new Date()) {
+export function buildAssistantContext(data: DayBoardData, options: { includeNotes?: boolean; focusHistory?: FocusHistoryEntry[] } = {}, now = new Date()) {
   const today = getLocalDateKey(now, data.timezone);
   const horizon = addDays(today, 21);
   const work = getWorkItems(data, now);
@@ -55,6 +56,12 @@ export function buildAssistantContext(data: DayBoardData, options: { includeNote
 
   return JSON.stringify({
     today,
+    display_name: data.displayName,
+    tasks: data.tasks,
+    assignments: data.assignments,
+    all_events: data.events,
+    all_exams: data.exams,
+    focus_history: options.focusHistory?.slice(0, 60),
     weekday: new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: data.timezone }).format(now),
     local_time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: data.timezone }).format(now),
     timezone: data.timezone,
@@ -71,7 +78,7 @@ export function buildAssistantContext(data: DayBoardData, options: { includeNote
     schedule_next_8_days: days.map((date) => ({ date, items: getAgenda(data, date).map((item) => `${timeRangeLabel(item)} ${item.title}`) })),
     free_today: findFreeSlots(data, today, { from: Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15, minLength: 30 }).map((slot) => `${timeFromMinutes(slot.start)}-${timeFromMinutes(slot.end)}`),
     habits: data.habits.map((habit) => ({ name: habit.name, done_today: habit.completedToday, streak_days: habit.streak })),
-    notes: options.includeNotes ? data.notes.slice(0, 12).map((note) => ({ title: note.title, category: note.category, content: note.content.slice(0, 600) })) : undefined
+    notes: options.includeNotes ? data.notes.map((note) => ({ id: note.id, title: note.title, category: note.category, content: note.content })) : undefined
   });
 }
 
@@ -167,6 +174,7 @@ interface AskOptions {
   mode?: "chat" | "extract";
   image?: AssistantImage;
   includeNotes?: boolean;
+  focusHistory?: FocusHistoryEntry[];
   cloudEnabled: boolean;
 }
 
@@ -176,7 +184,15 @@ interface AskOptions {
  */
 export async function askAssistant(turns: ChatTurn[], data: DayBoardData, options: AskOptions): Promise<AssistantResult> {
   const question = turns[turns.length - 1]?.content ?? "";
-  const local = (error?: string): AssistantResult => ({ ...answerLocally(question, data), source: "device", error });
+  const local = (error?: string): AssistantResult => {
+    if (/\b(focus|focused|study time)\b/i.test(question) && /\b(how much|history|spent|total|minutes|today)\b/i.test(question)) {
+      const today = getLocalDateKey(new Date(), data.timezone);
+      const entries = (options.focusHistory ?? []).filter((item) => !/\btoday\b/i.test(question) || (item.startedAt && getLocalDateKey(new Date(item.startedAt), data.timezone) === today));
+      const seconds = entries.reduce((sum, item) => sum + (item.focusedSeconds ?? 0), 0);
+      return {text: `You have ${Math.floor(seconds / 60)} minutes and ${seconds % 60} seconds of recorded focus across ${entries.length} sessions${/\btoday\b/i.test(question) ? " today" : ""}.`, source: "device", error};
+    }
+    return { ...answerLocally(question, options.includeNotes ? data : {...data, notes: []}), source: "device", error };
+  };
 
   if (!options.cloudEnabled) {
     if (options.image) return { text: "Reading photos needs the full assistant, which is not switched on for this site yet.", source: "device", needsCloud: true };
@@ -195,7 +211,7 @@ export async function askAssistant(turns: ChatTurn[], data: DayBoardData, option
     const response = await fetch("/api/assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ mode: options.mode ?? "chat", messages: turns, image: options.image, context: buildAssistantContext(data, { includeNotes: options.includeNotes }) })
+      body: JSON.stringify({ mode: options.mode ?? "chat", messages: turns, image: options.image, context: buildAssistantContext(data, { includeNotes: options.includeNotes, focusHistory: options.focusHistory }) })
     });
     const body = (await response.json().catch(() => ({}))) as { reply?: string; items?: unknown; changes?: unknown; error?: string };
     if (!response.ok) {

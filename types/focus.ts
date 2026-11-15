@@ -15,6 +15,7 @@ export interface FocusSession {
   break_frequency: number;
   long_break_after: number;
   session_number: number;
+  total_rounds?: number;
   status: FocusStatus;
   phase: "focus" | "break";
   paused_at: string | null;

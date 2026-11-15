@@ -2,9 +2,11 @@
 
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Pause, Play, SkipForward, Square } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Pause, Play, Coffee, Square } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { FOCUS_HISTORY_CHANGED_EVENT, saveGuestFocusSession } from "@/lib/focus-history";
+import { focusSegmentSeconds } from "@/lib/focus-time";
 import { getFocusRemaining } from "@/lib/focus-session";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -45,7 +47,10 @@ export function FocusPage() {
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [longBreakMinutes, setLongBreakMinutes] = useState(25);
-  const [breakFrequency, setBreakFrequency] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(4);
+  const changing = useRef(false);
+  const starting = useRef(false);
+  const breakFrequency = 1;
   const [longBreakAfter, setLongBreakAfter] = useState(3);
   const [music, setMusic] = useState("none");
   const [musicUrl, setMusicUrl] = useState("");
@@ -68,6 +73,8 @@ export function FocusPage() {
       const saved = localSession();
       const savedStatus = (saved as unknown as { status?: string } | null)?.status;
       setSession(saved ? { ...saved, status: savedStatus === "focus" ? "focusing" : savedStatus === "break_complete" ? "break" : saved.status } : null);
+      const guestHistory = JSON.parse(localStorage.getItem("dayboard:focus-history") ?? "[]") as Array<{id: string; reason: string; startedAt: string; focusedSeconds: number}>;
+      setHistory(guestHistory.map((item) => ({id: item.id, focus_reason: item.reason, focused_seconds: item.focusedSeconds, created_at: item.startedAt})));
       setLoadingSession(false);
       return;
     }
@@ -99,6 +106,18 @@ export function FocusPage() {
     };
   }, []);
 
+  const immersive = Boolean(session && session.status !== "completed");
+  useEffect(() => {
+    if (!immersive) return;
+    const shell = document.querySelector<HTMLElement>("[data-app-shell]");
+    const previousOverflow = document.body.style.overflow;
+    const previousDisplay = shell?.style.display ?? "";
+    if (shell) { shell.inert = true; shell.style.display = "none"; }
+    document.body.style.overflow = "hidden";
+    document.querySelector<HTMLButtonElement>('[aria-label="Focus session"] button')?.focus();
+    return () => { if (shell) { shell.inert = false; shell.style.display = previousDisplay; } document.body.style.overflow = previousOverflow; };
+  }, [immersive]);
+
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(interval);
@@ -107,6 +126,7 @@ export function FocusPage() {
   async function persist(next: FocusSession) {
     setSession(next);
     localStorage.setItem("dayboard-focus-session", JSON.stringify(next));
+    window.dispatchEvent(new Event("dayboard:focus-changed"));
     if (next.user_id === "local") return;
     const { error } = await supabase.from("focus_sessions").update(next).eq("id", next.id).eq("user_id", next.user_id);
     if (error) setNotice("Saved on this device; shared sync is temporarily unavailable.");
@@ -115,15 +135,17 @@ export function FocusPage() {
   async function begin(event: FormEvent) {
     event.preventDefault();
     const title = reason.trim() || requestedTask?.title || "";
-    if (!title || focusMinutes <= 0 || breakMinutes <= 0 || longBreakMinutes <= 0) {
+    if (starting.current) return;
+    if (!title || ![focusMinutes, breakMinutes, longBreakMinutes].every((n) => Number.isInteger(n) && n >= 1 && n <= 240)) {
       setNotice("Add a focus reason and valid positive durations.");
       return;
     }
+    starting.current = true;
     setNotice(null);
     const started = new Date();
     const draft = {
       user_id: "local",
-      task_id: taskId || null,
+      task_id: store.data.tasks.some((task) => task.id === taskId) ? taskId : null,
       focus_reason: title,
       started_at: started.toISOString(),
       segment_started_at: started.toISOString(),
@@ -134,6 +156,7 @@ export function FocusPage() {
       break_frequency: breakFrequency,
       long_break_after: longBreakAfter,
       session_number: 1,
+      total_rounds: totalRounds,
       status: "focusing" as const,
       phase: "focus" as const,
       paused_at: null,
@@ -149,6 +172,7 @@ export function FocusPage() {
     setSession(next);
     localStorage.setItem("dayboard-focus-session", JSON.stringify(next));
     startSound(next);
+    starting.current = false;
     const linked = store.data.tasks.find((task) => task.id === taskId);
     if (linked && linked.status === "not_started") store.updateTaskStatus(linked.id, "in_progress");
 
@@ -169,6 +193,12 @@ export function FocusPage() {
       if (error) setNotice("Session started locally; shared sync needs the Focus migration.");
     }
   }
+
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    noiseRef.current?.stop();
+    void audioContextRef.current?.close();
+  }, []);
 
   function startSound(active: FocusSession) {
     if (active.music_url) {
@@ -206,7 +236,7 @@ export function FocusPage() {
   }
 
   async function pauseOrResume() {
-    if (!session) return;
+    if (!session || changing.current || session.status === "completed") return;
     if (session.status === "paused") {
       const remaining = session.remaining_seconds ?? session.focus_duration;
       await persist({ ...session, status: session.phase === "focus" ? "focusing" : "break", paused_at: null, segment_started_at: new Date().toISOString(), ends_at: new Date(Date.now() + remaining * 1000).toISOString(), remaining_seconds: null, updated_at: new Date().toISOString() });
@@ -214,7 +244,7 @@ export function FocusPage() {
       void audioContextRef.current?.resume();
     } else {
       const remaining = getFocusRemaining(session);
-      const elapsed = session.phase === "focus" ? Math.max(0, Math.floor((Date.now() - new Date(session.segment_started_at).getTime()) / 1000)) : 0;
+      const elapsed = focusSegmentSeconds(session);
       audioRef.current?.pause();
       void audioContextRef.current?.suspend();
       await persist({ ...session, status: "paused", paused_at: new Date().toISOString(), remaining_seconds: remaining, ends_at: null, focused_seconds: session.focused_seconds + elapsed, updated_at: new Date().toISOString() });
@@ -222,20 +252,25 @@ export function FocusPage() {
   }
 
   async function finish() {
-    if (!session) return;
+    if (!session || changing.current) return;
+    changing.current = true;
     audioRef.current?.pause();
     noiseRef.current?.stop();
+    noiseRef.current = null;
     void audioContextRef.current?.close();
-    const remaining = getFocusRemaining(session);
-    const additional = session.phase === "focus" && session.status !== "paused" ? Math.max(0, Math.floor((Date.now() - new Date(session.segment_started_at).getTime()) / 1000)) : 0;
+    audioContextRef.current = null;
+    const additional = focusSegmentSeconds(session);
     const focused = session.focused_seconds + additional;
     const ended = new Date().toISOString();
     const completed = { ...session, status: "completed" as const, ends_at: ended, focused_seconds: focused, remaining_seconds: 0, updated_at: ended };
+    setSession(null);
+    setFinishConfirmOpen(false);
     await persist(completed);
     if (session.user_id !== "local" && focused > 0) {
       await supabase.from("task_sessions").upsert({ user_id: session.user_id, task_id: session.task_id, focus_session_id: session.id, start_time: session.created_at, end_time: ended, duration: focused, type: "focus" }, { onConflict: "focus_session_id" });
     }
     localStorage.removeItem("dayboard-focus-session");
+    window.dispatchEvent(new Event("dayboard:focus-changed"));
     setHistory((items) => [{ id: session.id, focus_reason: session.focus_reason, focused_seconds: focused, created_at: session.created_at }, ...items]);
     if (session.user_id === "local" && focused > 0) saveGuestFocusSession({ id: session.id, reason: session.focus_reason, startedAt: session.created_at, focusedSeconds: focused });
     else window.dispatchEvent(new Event(FOCUS_HISTORY_CHANGED_EVENT));
@@ -244,33 +279,34 @@ export function FocusPage() {
       store.updateTask(linkedTask.id, { progressPercent: Math.min(95, Math.round(linkedTask.progressPercent + (focused / 60 / linkedTask.estimatedMinutes) * 100)) });
     }
     setSession(null);
+    changing.current = false;
   }
 
-  async function startBreak() {
+  async function startBreak(manual = false) {
     if (!session) return;
+    if (!manual && session.session_number >= (session.total_rounds ?? 4)) { await finish(); return; }
     const long = session.session_number % session.long_break_after === 0;
-    if (!long && session.session_number % session.break_frequency !== 0) {
+    if (!manual && !long && session.session_number % session.break_frequency !== 0) {
       await nextSession();
       return;
     }
     const duration = long ? session.long_break_duration : session.break_duration;
-    const completedSegment = Math.max(0, Math.floor((Date.now() - new Date(session.segment_started_at).getTime()) / 1000));
-    await persist({ ...session, phase: "break", status: "break", segment_started_at: new Date().toISOString(), ends_at: new Date(Date.now() + duration * 1000).toISOString(), remaining_seconds: null, focused_seconds: session.focused_seconds + completedSegment, updated_at: new Date().toISOString() });
+    const completedSegment = focusSegmentSeconds(session);
+    await persist({ ...session, total_rounds: manual ? Math.max(session.total_rounds ?? 4, session.session_number + 1) : session.total_rounds, phase: "break", status: "break", segment_started_at: new Date().toISOString(), ends_at: new Date(Date.now() + duration * 1000).toISOString(), remaining_seconds: null, focused_seconds: session.focused_seconds + completedSegment, updated_at: new Date().toISOString() });
   }
 
   async function nextSession() {
     if (!session) return;
-    const justCompletedFocus = session.phase === "focus" && getFocusRemaining(session) === 0;
-    const completedSegment = justCompletedFocus ? Math.max(0, Math.floor((Date.now() - new Date(session.segment_started_at).getTime()) / 1000)) : 0;
+    const completedSegment = focusSegmentSeconds(session);
     await persist({ ...session, phase: "focus", status: "focusing", session_number: session.session_number + 1, segment_started_at: new Date().toISOString(), ends_at: new Date(Date.now() + session.focus_duration * 1000).toISOString(), remaining_seconds: null, focused_seconds: session.focused_seconds + completedSegment, updated_at: new Date().toISOString() });
   }
 
-  const remaining = getFocusRemaining(session);
+  const remaining = getFocusRemaining(session, now.getTime());
   const phaseDuration = session?.phase === "break" ? (session.session_number % session.long_break_after === 0 ? session.long_break_duration : session.break_duration) : session?.focus_duration ?? 1;
   const progress = Math.min(1, Math.max(0, remaining / Math.max(phaseDuration, 1)));
 
   useEffect(() => {
-    if (!session || session.status === "paused" || remaining > 0 || (session.phase === "break" && !session.ends_at)) return;
+    if (!session || changing.current || session.status === "completed" || session.status === "paused" || remaining > 0 || (session.phase === "break" && !session.ends_at)) return;
     if (session.phase === "focus") {
       void startBreak();
     } else if (session.auto_start) {
@@ -278,7 +314,7 @@ export function FocusPage() {
     } else {
       void persist({ ...session, status: "break", ends_at: null, remaining_seconds: 0, updated_at: new Date().toISOString() });
     }
-  }, [remaining, session?.id, session?.status]);
+  }, [remaining, session?.id, session?.status, session?.ends_at, session?.phase]);
 
   const today = new Date().toDateString();
   const todayHistory = history.filter((item) => new Date(item.created_at).toDateString() === today);
@@ -324,105 +360,43 @@ export function FocusPage() {
   }
 
   if (session && session.status !== "completed") {
-    const radius = 46;
-    const circumference = 2 * Math.PI * radius;
     const isBreak = session.phase === "break";
-    const isBreakComplete = isBreak && !session.ends_at;
-    const linkedTask = store.data.tasks.find((task) => task.id === session.task_id);
-    const stateLabel = session.status === "paused" ? "Paused" : isBreakComplete ? "Break finished" : isBreak ? "Break" : "Focusing";
+    const isBreakComplete = isBreak && session.status !== "paused" && !session.ends_at;
+    const stateLabel = session.status === "paused" ? "Paused" : isBreakComplete ? "Break finished" : isBreak ? "On a break" : "Focusing";
+    const clock = new Intl.DateTimeFormat(undefined, { timeZone: store.data.timezone, hour: "numeric", minute: "2-digit" }).format(now);
+    const date = new Intl.DateTimeFormat(undefined, { timeZone: store.data.timezone, weekday: "long", month: "short", day: "numeric" }).format(now);
 
-    return (
-      <Page title="Focus" subtitle="One task, no distractions">
-        <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
-          <section className="flex min-h-[560px] flex-col items-center justify-center gap-5 rounded-card bg-[radial-gradient(circle_at_50%_35%,#2a2468,#14161c_72%)] px-5 py-8 text-center text-white shadow-card">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
-              {stateLabel} · session {session.session_number}
-            </span>
-            <div className="relative h-[min(70vw,320px)] w-[min(70vw,320px)]">
-              <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" role="img" aria-label={`${formatCountdown(remaining)} remaining`}>
-                <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4" className="stroke-white/15" />
-                <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} className="stroke-[#8f7cff] transition-[stroke-dashoffset] duration-700 ease-linear" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="text-[clamp(3.2rem,15vw,5.25rem)] font-bold leading-none tracking-[-0.04em] tabular-nums">{formatCountdown(remaining)}</div>
-                <div className="mt-2 text-sm text-[#b9b4e8]">of {Math.ceil(phaseDuration / 60)}:00</div>
-              </div>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">{isBreak ? "Stand up. Drink water. Rest your eyes." : session.focus_reason}</h2>
-              {linkedTask && !isBreak ? <p className="text-[#b9b4e8]">{linkedTask.steps?.length ? `Step ${Math.min(linkedTask.steps.filter((step) => step.done).length + 1, linkedTask.steps.length)} of ${linkedTask.steps.length}` : "Linked task"}</p> : null}
-            </div>
-            {isBreakComplete ? (
-              <Button variant="hero" size="lg" onClick={nextSession} icon={<Play className="h-4 w-4" />}>
-                Start next session
-              </Button>
-            ) : isBreak ? (
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button variant="heroGhost" size="lg" onClick={nextSession}>
-                  Skip break
-                </Button>
-                <Button variant="hero" size="lg" onClick={() => setFinishConfirmOpen(true)}>
-                  End focus
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <button type="button" aria-label="Finish session" onClick={() => setFinishConfirmOpen(true)} className="grid h-14 w-14 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-                  <Square className="h-5 w-5" />
-                </button>
-                <button type="button" aria-label={session.status === "paused" ? "Resume" : "Pause"} onClick={pauseOrResume} className="grid h-[76px] w-[76px] place-items-center rounded-full bg-white text-[#14161c]">
-                  {session.status === "paused" ? <Play className="h-7 w-7" fill="currentColor" /> : <Pause className="h-7 w-7" fill="currentColor" />}
-                </button>
-                <button type="button" aria-label="Skip to break" onClick={() => void startBreak()} className="grid h-14 w-14 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-                  <SkipForward className="h-5 w-5" />
-                </button>
-              </div>
-            )}
-            {notice ? <p className="max-w-md text-sm text-[#b9b4e8]">{notice}</p> : null}
-          </section>
+    return createPortal(
+      <section aria-label="Focus session" className="fixed inset-0 z-[60] grid h-dvh grid-rows-[auto_1fr_auto] overflow-y-auto bg-bg px-5 py-5 text-ink sm:px-10 sm:py-8">
+        <header className="flex items-start justify-between gap-4 text-sm text-ink-2">
+          <div><div className="font-medium">{date}</div><div className="mt-1 tabular-nums">{clock}</div></div>
+          <div className="text-right"><div className="font-medium text-accent">{stateLabel}</div><div className="mt-1 text-xs">Round {session.session_number} of {session.total_rounds ?? 4}</div></div>
+        </header>
 
-          <div className="grid content-start gap-5">
-            <Card>
-              <CardHeader title="This session" />
-              <Row first className="py-2.5 text-sm">
-                <span className="flex-1 text-ink-2">Focus length</span>
-                <span className="font-semibold">{Math.round(session.focus_duration / 60)} min</span>
-              </Row>
-              <Row className="py-2.5 text-sm">
-                <span className="flex-1 text-ink-2">Break</span>
-                <span className="font-semibold">{Math.round(session.break_duration / 60)} min</span>
-              </Row>
-              <Row className="py-2.5 text-sm">
-                <span className="flex-1 text-ink-2">Long break after</span>
-                <span className="font-semibold">{session.long_break_after} sessions</span>
-              </Row>
-              <Row className="py-2.5 text-sm">
-                <span className="flex-1 text-ink-2">Sound</span>
-                <span className="font-semibold capitalize">{session.music_url ? "Your music" : session.music.replace("-", " ")}</span>
-              </Row>
-            </Card>
-            {todayCard}
-          </div>
+        <div className="flex min-h-0 flex-col items-center justify-center py-8 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-ink-3">{isBreak ? "Taking a break from" : "Focusing on"}</p>
+          <h1 className="max-w-3xl break-words text-lg font-medium sm:text-2xl">{session.focus_reason}</h1>
+          <div role="timer" aria-label="Time remaining" aria-live="off" className="my-5 text-[clamp(5rem,20vw,15rem)] font-light leading-none tracking-[-0.06em] tabular-nums sm:my-8">{formatCountdown(remaining)}</div>
+          <div aria-hidden="true" className="h-1 w-36 overflow-hidden rounded-full bg-track sm:w-52"><div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${progress * 100}%` }} /></div>
+          <p className="mt-4 text-sm text-ink-3">{isBreakComplete ? "Ready when you are." : isBreak ? "Rest your eyes. Take a breath." : session.status === "paused" ? "Continue when you?re ready." : `${Math.ceil(session.focus_duration / 60)} minutes of focus`}</p>
         </div>
 
-        <Sheet open={finishConfirmOpen} onClose={() => setFinishConfirmOpen(false)} title="Finish this focus session?" description="Your focused time is saved and the linked task is updated.">
+        <footer className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {isBreakComplete ? <Button variant="primary" size="lg" onClick={nextSession} icon={<Play className="h-4 w-4" />}>Start next session</Button> : <Button variant="primary" size="lg" onClick={pauseOrResume} icon={session.status === "paused" ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}>{session.status === "paused" ? "Resume" : "Pause"}</Button>}
+            {isBreak ? !isBreakComplete && <Button size="lg" onClick={nextSession}>Skip break</Button> : <Button size="lg" onClick={() => void startBreak(true)} icon={<Coffee className="h-4 w-4" />}>Take a break</Button>}
+            <Button variant="ghost" size="lg" aria-label={isBreak ? "End focus" : "Finish session"} onClick={() => setFinishConfirmOpen(true)} icon={<Square className="h-4 w-4" />}>End focus</Button>
+          </div>
+          {notice ? <p role="status" className="max-w-md text-center text-xs text-ink-2">{notice}</p> : null}
+        </footer>
+
+        <Sheet open={finishConfirmOpen} onClose={() => setFinishConfirmOpen(false)} title="Finish this focus session?" description="Your focused time is saved to Insights.">
           <div className="flex gap-3">
-            <Button full onClick={() => setFinishConfirmOpen(false)}>
-              Keep going
-            </Button>
-            <Button
-              full
-              variant="primary"
-              onClick={() => {
-                setFinishConfirmOpen(false);
-                void finish();
-              }}
-            >
-              Finish
-            </Button>
+            <Button full onClick={() => setFinishConfirmOpen(false)}>Keep going</Button>
+            <Button full variant="primary" onClick={() => { setFinishConfirmOpen(false); void finish(); }}>Finish</Button>
           </div>
         </Sheet>
-      </Page>
+      </section>, document.body
     );
   }
 
@@ -434,12 +408,12 @@ export function FocusPage() {
             <Field label="What are you focusing on?">
               <TextInput required value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Study linear algebra" />
             </Field>
-            <Field label="Link to a task (optional)" hint="Finishing the session updates the task's progress.">
+            <Field label="Task or assignment (optional)" hint="Choose what to focus on. Linked tasks receive progress updates.">
               <SelectInput
                 value={taskId}
                 onChange={(event) => {
                   setTaskId(event.target.value);
-                  const task = store.data.tasks.find((item) => item.id === event.target.value);
+                  const task = store.data.tasks.find((item) => item.id === event.target.value) ?? store.data.assignments.find((item) => `assignment:${item.id}` === event.target.value);
                   if (task) {
                     setReason(task.title);
                     if (task.estimatedMinutes > 0) setFocusMinutes(task.estimatedMinutes <= 20 ? 15 : task.estimatedMinutes <= 35 ? 25 : task.estimatedMinutes <= 60 ? 45 : 50);
@@ -447,12 +421,16 @@ export function FocusPage() {
                 }}
               >
                 <option value="">None</option>
+                {store.data.assignments.filter((item) => item.status !== "submitted" && item.status !== "graded").map((item) => <option key={item.id} value={`assignment:${item.id}`}>Assignment: {item.title}</option>)}
                 {openTasks.map((task) => (
                   <option key={task.id} value={task.id}>
                     {task.title}
                   </option>
                 ))}
               </SelectInput>
+            </Field>
+            <Field label="Number of breaks" hint={`${totalRounds} focus rounds with ${totalRounds - 1} breaks, then the session ends automatically.`}>
+              <TextInput type="number" min={0} max={24} value={totalRounds - 1} onChange={(event) => setTotalRounds(Math.min(25, Math.max(1, Math.floor(Number(event.target.value)) + 1)))} />
             </Field>
             <DurationField label="Focus" value={focusMinutes} options={focusOptions} onChange={setFocusMinutes} />
             <DurationField label="Break" value={breakMinutes} options={breakOptions} onChange={setBreakMinutes} />
@@ -475,7 +453,6 @@ export function FocusPage() {
             <details className="rounded-xl border border-line px-3.5 py-3">
               <summary className="cursor-pointer text-sm font-semibold">More options</summary>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <SelectField label="Take a break" value={breakFrequency} onChange={setBreakFrequency} options={[1, 2, 3, 4].map((n) => [n, n === 1 ? "After every session" : `After ${n} sessions`] as [number, string])} />
                 <SelectField label="Long break after" value={longBreakAfter} onChange={setLongBreakAfter} options={[2, 3, 4, 5].map((n) => [n, `${n} sessions`] as [number, string])} />
                 <SelectField label="Long break length" value={longBreakMinutes} onChange={setLongBreakMinutes} options={[15, 20, 25, 30].map((n) => [n, `${n} min`] as [number, string])} />
                 <Field label="Music link (optional)">
@@ -500,13 +477,14 @@ export function FocusPage() {
 }
 
 function DurationField({ label, value, options, onChange }: { label: string; value: number; options: number[]; onChange: (value: number) => void }) {
-  const custom = !options.includes(value);
+  const [customMode, setCustomMode] = useState(false);
+  const custom = customMode || !options.includes(value);
   return (
     <div>
       <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{label}</span>
       <div className="flex flex-wrap items-center gap-2.5">
-        <Segmented label={`${label} minutes`} value={custom ? "custom" : String(value)} onChange={(next) => onChange(next === "custom" ? options[0] + 1 : Number(next))} options={[...options.map((option) => ({ value: String(option), label: `${option} min` })), { value: "custom", label: "Custom" }]} />
-        {custom ? <TextInput type="number" min={1} max={240} value={value} onChange={(event) => onChange(Math.max(1, Number(event.target.value)))} aria-label={`Custom ${label} minutes`} className="h-10 w-24" /> : null}
+        <Segmented label={`${label} minutes`} value={custom ? "custom" : String(value)} onChange={(next) => { setCustomMode(next === "custom"); if (next !== "custom") onChange(Number(next)); }} options={[...options.map((option) => ({ value: String(option), label: `${option} min` })), { value: "custom", label: "Custom" }]} />
+        {custom ? <TextInput type="number" min={1} max={240} value={value} onChange={(event) => onChange(Number(event.target.value))} aria-label={`Custom ${label} minutes`} className="h-10 w-24" /> : null}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { DayBoardData } from "@/types/dayboard";
 import { getAgenda, timeRangeLabel } from "./agenda";
 import { addDays, formatShortTime, getDayDistance, getLocalDateKey, getRelativeDayLabel, timeFromMinutes } from "./date-utils";
-import type { DraftItem } from "./drafts";
+import type { DraftChange, DraftItem } from "./drafts";
 import { findFreeSlots, suggestFreeTime } from "./planner";
 import { looksLikeAddRequest, parseQuickAdd } from "./quick-parse";
 import { getCourseGrade, getWorkItems } from "./work";
@@ -9,6 +9,7 @@ import { getCourseGrade, getWorkItems } from "./work";
 export interface AssistantReply {
   text: string;
   drafts?: DraftItem[];
+  changes?: DraftChange[];
   /** True when the question needs the cloud assistant and it is not available. */
   needsCloud?: boolean;
 }
@@ -29,6 +30,29 @@ export function answerLocally(question: string, data: DayBoardData, now = new Da
   const lower = question.trim().toLowerCase();
   const today = getLocalDateKey(now, data.timezone);
   const work = getWorkItems(data, now).filter((item) => !item.done);
+
+  const action = /^(delete|remove|cancel)\b/.test(lower) ? "delete" : /^(complete|finish|mark done)\b/.test(lower) ? "complete" : null;
+  if (action) {
+    const title = lower.replace(/^(delete|remove|cancel|complete|finish|mark done)\s+(the\s+)?((task|assignment|event|exam)\s+)?/, "").replace(/^["']|["']$/g, "").trim();
+    const candidates = [
+      ...data.tasks.map((item) => ({...item, target: "task" as const})),
+      ...data.assignments.map((item) => ({...item, target: "assignment" as const})),
+      ...data.events.map((item) => ({...item, target: "event" as const})),
+      ...data.exams.map((item) => ({...item, target: "exam" as const}))
+    ];
+    const matches = candidates.filter((item) => item.title.toLowerCase() === title);
+    if (matches.length === 1) {
+      const item = matches[0];
+      if (action === "complete" && item.target !== "task" && item.target !== "assignment") return {text: "I can mark tasks and assignments complete. You can remove that event or exam instead."};
+      return {text: `Review and confirm to ${action} ${item.title}.`, changes: [{id: crypto.randomUUID(), action, target: item.target, targetId: item.id, title: item.title, selected: true}]};
+    }
+    return {text: matches.length > 1 ? "Several items have that title. Open the item to choose which one to change." : "Which item? Use its exact title so I can find it."};
+  }
+
+  if (/\b(completed|finished|submitted)\b/.test(lower)) {
+    const done = getWorkItems(data, now).filter((item) => item.done);
+    return {text: done.length ? `Completed work:\n${list(done.map((item) => item.title))}` : "No completed work is recorded yet."};
+  }
 
   if (/\b(due|deadline)s?\b.*\b(week|soon|coming up|upcoming)\b|\bwhat'?s due\b/.test(lower)) {
     const end = addDays(today, 7);

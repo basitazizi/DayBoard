@@ -24,7 +24,7 @@ function readGuestHistory(): FocusHistoryEntry[] {
 /** Records a finished session for people who are not signed in. */
 export function saveGuestFocusSession(entry: FocusHistoryEntry) {
   try {
-    localStorage.setItem(GUEST_FOCUS_HISTORY_KEY, JSON.stringify([entry, ...readGuestHistory()].slice(0, 300)));
+    localStorage.setItem(GUEST_FOCUS_HISTORY_KEY, JSON.stringify([entry, ...readGuestHistory().filter((item) => item.id !== entry.id)].slice(0, 300)));
   } catch {
     // Storage unavailable; history simply is not kept.
   }

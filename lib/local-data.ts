@@ -127,6 +127,7 @@ function mapAssignment(row: Row): Assignment {
     actualMinutes: row.actual_minutes ?? 0,
     gradeWeight: row.grade_weight ?? undefined,
     difficulty: row.difficulty ?? 3,
+    steps: parseSteps(row.steps),
     score: typeof row.score === "number" ? row.score : row.score != null ? Number(row.score) : undefined,
     status: oneOf(row.status, ASSIGNMENT_STATUSES, "not_started")
   };
@@ -465,7 +466,10 @@ export function useDayBoardData() {
       const realId = await resolveId(id);
       if (!realId) return;
       const { error } = await supabase.from(table).delete().eq("id", realId).eq("user_id", currentUserId);
-      if (error) console.warn(`Could not delete from ${table}`, error.message);
+      if (error) {
+        console.warn(`Could not delete from ${table}`, error.message);
+        setSyncError("A deletion could not be saved to your account. Check your connection and retry.");
+      }
     }
 
     const swap = <T extends { id: string }>(items: T[], optimisticId: string, saved: T) => items.map((item) => (item.id === optimisticId ? saved : item));
@@ -632,6 +636,7 @@ export function useDayBoardData() {
               actual_minutes: 0,
               grade_weight: assignment.gradeWeight ?? null,
               difficulty: assignment.difficulty,
+              steps: assignment.steps ?? [],
               status: "not_started"
             },
             (row) => mutate((current) => ({ ...current, assignments: swap(current.assignments, optimistic.id, mapAssignment(row)) }))
@@ -639,7 +644,7 @@ export function useDayBoardData() {
         })();
         return optimistic.id;
       },
-      updateAssignment: (assignmentId: string, patch: Partial<Pick<Assignment, "status" | "score" | "title" | "dueDate" | "dueTime">>) => {
+      updateAssignment: (assignmentId: string, patch: Partial<Pick<Assignment, "status" | "score" | "title" | "dueDate" | "dueTime" | "steps">>) => {
         mutate((current) => ({ ...current, assignments: current.assignments.map((item) => (item.id === assignmentId ? { ...item, ...patch } : item)) }));
         const payload: Row = {};
         if ("status" in patch) payload.status = patch.status;
@@ -647,6 +652,7 @@ export function useDayBoardData() {
         if ("title" in patch) payload.title = patch.title;
         if ("dueDate" in patch) payload.due_date = patch.dueDate || null;
         if ("dueTime" in patch) payload.due_time = patch.dueTime || null;
+        if ("steps" in patch) payload.steps = patch.steps ?? [];
         void remoteUpdate("assignments", assignmentId, payload);
       },
       deleteAssignment: (assignmentId: string) => {

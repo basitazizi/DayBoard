@@ -64,7 +64,7 @@ export function LoginPage() {
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[0.95fr_1.05fr]">
         <section className="hero-gradient m-4 hidden flex-col rounded-[28px] p-10 text-white lg:flex">
           <div className="flex items-center gap-3 text-2xl font-bold tracking-[-0.02em]">
-            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-white text-[#3b2fd0]">
+            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-white text-[var(--hero-from)]">
               <Check className="h-6 w-6" strokeWidth={3} />
             </span>
             DayBoard
