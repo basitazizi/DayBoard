@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>.dd{width:30px;height:30px;border-radius:10px;background:#ECEAE3;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}.dd.y{background:var(--c)}.dd.t{background:#fff;border:2px dashed var(--c);color:var(--c)}
+.hm{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.hm div{aspect-ratio:1;border-radius:7px;background:#ECEAE3}</style>
+<body data-page="habits" data-title="Habits" data-sub="Small things, done most days">
+<main><div class="g f1">
+<div class="card f1" style="flex:1.7">
+  <div class="hd"><h2>Last 7 days</h2><div class="row mu3" style="gap:10px;font-size:11px;font-weight:700;letter-spacing:.06em;padding-right:112px"><span style="width:30px;text-align:center">T</span><span style="width:30px;text-align:center">W</span><span style="width:30px;text-align:center">T</span><span style="width:30px;text-align:center">F</span><span style="width:30px;text-align:center">S</span><span style="width:30px;text-align:center">S</span><span style="width:30px;text-align:center;color:var(--accent)">M</span></div></div>
+  <div id="hb"></div>
+  <div class="row mu" style="padding:16px 0 0;border-top:1px solid var(--line);gap:8px"><i data-i="plus" data-s="18"></i><span class="b sm">Add a habit, or just say “remind me to stretch every morning”</span></div>
+</div>
+<div class="col f1" style="gap:20px">
+  <div class="card row" style="gap:20px"><div class="ring gr" style="--p:82;width:112px;height:112px"><div style="width:88px;height:88px"><div><div class="big" style="font-size:26px">82%</div></div></div></div><div><div class="lb">Consistency this week</div><div style="font-size:18px;font-weight:650;margin:6px 0 4px">Your best week this month</div><div class="mu sm">23 of 28 check-ins · up from 71%</div></div></div>
+  <div class="card f1"><div class="hd"><h2>Last 5 weeks</h2><div class="row mu3 sm" style="gap:6px">Less<span style="width:12px;height:12px;border-radius:4px;background:#ECEAE3"></span><span style="width:12px;height:12px;border-radius:4px;background:#BFE6CC"></span><span style="width:12px;height:12px;border-radius:4px;background:#5DBB7E"></span><span style="width:12px;height:12px;border-radius:4px;background:#25874A"></span>More</div></div><div class="hm" id="hm" style="max-width:330px"></div></div>
+  <div class="card ai"><div class="row" style="gap:8px;color:var(--accent)"><i data-i="sparkle" data-s="17"></i><span class="b sm">Pattern spotted</span></div><div style="margin-top:8px">You skip <b>Read 20 min</b> on days with evening classes. Try moving it to lunchtime on Mon and Wed.</div><div class="row" style="margin-top:12px;gap:8px"><div class="btn p s">Move it</div><div class="btn s">Keep as is</div></div></div>
+</div>
+</div></main>
+<script>
+const H=[['Gym','flame','gr','4 day streak','1011110'],['Read 20 min','book','ac','3 day streak','0101111'],['Drink 2L water','drop','bl','11 day streak','1111111'],['Sleep by 11:30','moon','ro','Missed yesterday','1101100'],['Review flashcards','note','am','6 day streak','0111111']];
+document.getElementById('hb').innerHTML=H.map((h,r)=>'<div class="li '+h[2]+(r?'':' first')+'" style="padding:15px 0"><div class="ico"><i data-i="'+h[1]+'"></i></div><div class="f1"><div class="b">'+h[0]+'</div><div class="mu sm">'+h[3]+'</div></div><div class="row" style="gap:10px">'+[...h[4]].map((c,i)=>'<div class="dd'+(c=='1'?' y':(i==6?' t':''))+'">'+(c=='1'?'✓':'')+'</div>').join('')+'</div><div class="btn s '+(h[4][6]=='1'?'':'p')+'" style="width:100px;justify-content:center">'+(h[4][6]=='1'?'Done today':'Check in')+'</div></div>').join('');
+const lv=['#ECEAE3','#BFE6CC','#5DBB7E','#25874A'],p='2312310 3323210 2233311 3332320 3323000';
+document.getElementById('hm').innerHTML=[...p.replace(/ /g,'')].map(c=>'<div style="background:'+lv[c]+'"></div>').join('');
+</script><script src="shell.js"></script>

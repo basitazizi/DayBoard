@@ -1,5 +1,5 @@
 import type { PriorityResult, Task } from "@/types/dayboard";
-import { getDayDistance } from "./date-utils";
+import { getDayDistance, getLocalDateKey } from "./date-utils";
 
 const manualPriorityScore: Record<Task["priority"], number> = {
   low: 10,
@@ -9,7 +9,7 @@ const manualPriorityScore: Record<Task["priority"], number> = {
 };
 
 export function getTaskPriority(task: Task, now = new Date()): PriorityResult {
-  const nowKey = now.toISOString().slice(0, 10);
+  const nowKey = getLocalDateKey(now);
   const dueDistance = task.dueDate ? getDayDistance(task.dueDate, nowKey) : 30;
   const remainingMinutes = Math.max(task.estimatedMinutes - task.actualMinutes, 0);
 

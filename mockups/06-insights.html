@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>.bars{display:flex;align-items:flex-end;gap:18px;height:170px;padding-top:10px}.bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}.bars u{display:block;width:100%;max-width:46px;border-radius:9px 9px 4px 4px;background:#CFC9FF}.bars .hi u{background:var(--accent)}.bars span{font-size:12px;color:var(--ink3);font-weight:600}.bars b{font-size:12px}
+.up{color:var(--green);font-weight:600;font-size:13px}</style>
+<body data-page="insights" data-title="Insights" data-sub="What your week is telling you">
+<main>
+<div class="row" style="margin-bottom:16px"><div class="seg"><span class="on">This week</span><span>This month</span><span>Last 30 days</span><span>Semester</span></div></div>
+<div class="g" style="margin-bottom:20px">
+  <div class="card f1"><div class="lb">Focus time</div><div class="big" style="margin:8px 0 4px">12h 40m</div><div class="up">↑ 18% vs last week</div></div>
+  <div class="card f1"><div class="lb">Tasks finished</div><div class="big" style="margin:8px 0 4px">23</div><div class="up">↑ 5 more</div></div>
+  <div class="card f1"><div class="lb">On-time rate</div><div class="big" style="margin:8px 0 4px">91%</div><div class="mu sm">2 late of 23</div></div>
+  <div class="card f1"><div class="lb">Habit consistency</div><div class="big" style="margin:8px 0 4px">82%</div><div class="up">↑ 11 points</div></div>
+</div>
+<div class="g" style="margin-bottom:20px">
+  <div class="card f1" style="flex:1.5"><div class="hd"><h2>Focus hours by day</h2><span class="mu sm">Goal 2h 30m a day</span></div>
+    <div class="bars"><div><b>1.5h</b><u style="height:38%"></u><span>Mon</span></div><div><b>2.2h</b><u style="height:55%"></u><span>Tue</span></div><div class="hi"><b>3.4h</b><u style="height:86%"></u><span>Wed</span></div><div><b>1.8h</b><u style="height:45%"></u><span>Thu</span></div><div><b>2.6h</b><u style="height:66%"></u><span>Fri</span></div><div><b>0.7h</b><u style="height:18%"></u><span>Sat</span></div><div><b>0.5h</b><u style="height:13%"></u><span>Sun</span></div></div></div>
+  <div class="card f1 row" style="gap:24px"><div style="width:150px;height:150px;border-radius:50%;flex:none;background:conic-gradient(#2470D8 0 34%,#0B8F80 0 60%,#D13A60 0 82%,#B8730A 0);display:grid;place-items:center"><div style="width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center"><div><div class="b" style="font-size:20px">12.7h</div><div class="mu3" style="font-size:11px">total</div></div></div></div>
+    <div class="col f1" style="gap:10px"><h2>Time by class</h2>
+      <div class="row sm"><span style="width:10px;height:10px;border-radius:3px;background:#2470D8"></span><span class="f1">Calculus II</span><b>4.3h</b></div>
+      <div class="row sm"><span style="width:10px;height:10px;border-radius:3px;background:#0B8F80"></span><span class="f1">Chemistry</span><b>3.3h</b></div>
+      <div class="row sm"><span style="width:10px;height:10px;border-radius:3px;background:#D13A60"></span><span class="f1">English Lit</span><b>2.8h</b></div>
+      <div class="row sm"><span style="width:10px;height:10px;border-radius:3px;background:#B8730A"></span><span class="f1">Biology</span><b>2.3h</b></div></div></div>
+</div>
+<div class="lb" style="margin-bottom:10px">What this means</div>
+<div class="g f1">
+  <div class="card ai f1 col" style="gap:8px"><div class="row am"><div class="ico"><i data-i="school"></i></div><h2>Biology is falling behind</h2></div><div class="mu f1">It has your lowest grade and the least study time, with a midterm on Friday.</div><div class="btn p s" style="align-self:flex-start">Add 2 more study sessions</div></div>
+  <div class="card ai f1 col" style="gap:8px"><div class="row ac"><div class="ico"><i data-i="moon"></i></div><h2>You work best after 7 PM</h2></div><div class="mu f1">68% of your completed focus sessions happen in the evening. Mornings are often cut short.</div><div class="btn s" style="align-self:flex-start">Plan hard tasks for evenings</div></div>
+  <div class="card ai f1 col" style="gap:8px"><div class="row gr"><div class="ico"><i data-i="flame"></i></div><h2>Weekends go quiet</h2></div><div class="mu f1">Focus drops to under an hour on Saturday and Sunday. One short session would keep momentum.</div><div class="btn s" style="align-self:flex-start">Add a 30 min Sunday review</div></div>
+</div></main><script src="shell.js"></script>

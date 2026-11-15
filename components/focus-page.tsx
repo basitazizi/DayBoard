@@ -1,16 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pause, Play, Square } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Pause, Play, SkipForward, Square } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { FOCUS_HISTORY_CHANGED_EVENT, saveGuestFocusSession } from "@/lib/focus-history";
 import { getFocusRemaining } from "@/lib/focus-session";
-import { useDayBoardData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/lib/theme";
 import type { FocusHistoryItem, FocusSession } from "@/types/focus";
+import { useApp } from "./app-context";
+import { Page } from "./app-shell";
+import { Button, Card, CardHeader, Field, Notice, ProgressBar, Row, Segmented, SelectInput, Sheet, TextInput, Toggle } from "./ui";
 
-const focusOptions = [15, 25, 30, 45, 50, 60, 90];
-const breakOptions = [5, 10, 15, 20];
+const focusOptions = [15, 25, 45, 50, 60, 90];
+const breakOptions = [5, 10, 15];
 
 function formatCountdown(total: number) {
   const safe = Math.max(0, total);
@@ -19,7 +23,8 @@ function formatCountdown(total: number) {
 
 function formatFocused(seconds: number) {
   const minutes = Math.floor(seconds / 60);
-  return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
+  if (minutes < 60) return `${minutes}m`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${Math.floor(minutes / 60)}h`;
 }
 
 function localSession(): FocusSession | null {
@@ -28,7 +33,8 @@ function localSession(): FocusSession | null {
 
 export function FocusPage() {
   const searchParams = useSearchParams();
-  const store = useDayBoardData();
+  const { store } = useApp();
+  const { prefs } = useTheme();
   const requestedTask = store.data.tasks.find((task) => task.id === searchParams.get("task"));
   const [session, setSession] = useState<FocusSession | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -36,8 +42,8 @@ export function FocusPage() {
   const [now, setNow] = useState(new Date());
   const [reason, setReason] = useState("");
   const [taskId, setTaskId] = useState("");
-  const [focusMinutes, setFocusMinutes] = useState(50);
-  const [breakMinutes, setBreakMinutes] = useState(10);
+  const [focusMinutes, setFocusMinutes] = useState(25);
+  const [breakMinutes, setBreakMinutes] = useState(5);
   const [longBreakMinutes, setLongBreakMinutes] = useState(25);
   const [breakFrequency, setBreakFrequency] = useState(1);
   const [longBreakAfter, setLongBreakAfter] = useState(3);
@@ -143,6 +149,8 @@ export function FocusPage() {
     setSession(next);
     localStorage.setItem("dayboard-focus-session", JSON.stringify(next));
     startSound(next);
+    const linked = store.data.tasks.find((task) => task.id === taskId);
+    if (linked && linked.status === "not_started") store.updateTaskStatus(linked.id, "in_progress");
 
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
@@ -229,6 +237,12 @@ export function FocusPage() {
     }
     localStorage.removeItem("dayboard-focus-session");
     setHistory((items) => [{ id: session.id, focus_reason: session.focus_reason, focused_seconds: focused, created_at: session.created_at }, ...items]);
+    if (session.user_id === "local" && focused > 0) saveGuestFocusSession({ id: session.id, reason: session.focus_reason, startedAt: session.created_at, focusedSeconds: focused });
+    else window.dispatchEvent(new Event(FOCUS_HISTORY_CHANGED_EVENT));
+    const linkedTask = store.data.tasks.find((task) => task.id === session.task_id);
+    if (linkedTask && linkedTask.status !== "completed" && !linkedTask.steps?.length && linkedTask.estimatedMinutes > 0 && focused > 0) {
+      store.updateTask(linkedTask.id, { progressPercent: Math.min(95, Math.round(linkedTask.progressPercent + (focused / 60 / linkedTask.estimatedMinutes) * 100)) });
+    }
     setSession(null);
   }
 
@@ -266,8 +280,47 @@ export function FocusPage() {
     }
   }, [remaining, session?.id, session?.status]);
 
+  const today = new Date().toDateString();
+  const todayHistory = history.filter((item) => new Date(item.created_at).toDateString() === today);
+  const totalToday = todayHistory.reduce((sum, item) => sum + item.focused_seconds, 0);
+  const goalSeconds = prefs.focusGoalMinutes * 60;
+  const openTasks = store.data.tasks.filter((task) => task.status !== "completed" && task.status !== "cancelled");
+
+  const todayCard = (
+    <Card>
+      <CardHeader title="Today" action={<span className="text-[13px] text-ink-2">Goal {formatFocused(goalSeconds)}</span>} />
+      <div className="flex gap-7">
+        <div>
+          <div className="text-[28px] font-bold leading-tight tracking-[-0.03em]">{formatFocused(totalToday)}</div>
+          <div className="text-[13px] text-ink-2">focused</div>
+        </div>
+        <div>
+          <div className="text-[28px] font-bold leading-tight tracking-[-0.03em]">{todayHistory.length}</div>
+          <div className="text-[13px] text-ink-2">session{todayHistory.length === 1 ? "" : "s"}</div>
+        </div>
+      </div>
+      <ProgressBar value={(totalToday / goalSeconds) * 100} className="mt-4" label="Daily focus goal" />
+      {todayHistory.length ? (
+        <div className="mt-3">
+          {todayHistory.slice(0, 4).map((item, index) => (
+            <Row key={item.id} first={index === 0} className="py-2.5 text-sm">
+              <span className="min-w-0 flex-1 truncate">{item.focus_reason}</span>
+              <span className="text-ink-2">{formatFocused(item.focused_seconds)}</span>
+            </Row>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-[13px] text-ink-2">Finished sessions show up here and update the linked task.</p>
+      )}
+    </Card>
+  );
+
   if (loadingSession) {
-    return <main className="flex min-h-dvh items-center justify-center bg-white text-sm text-[#666]">Loading focus session…</main>;
+    return (
+      <Page title="Focus" subtitle="One task, no distractions">
+        <Card className="grid h-64 place-items-center text-sm text-ink-2">Loading focus session…</Card>
+      </Page>
+    );
   }
 
   if (session && session.status !== "completed") {
@@ -275,68 +328,200 @@ export function FocusPage() {
     const circumference = 2 * Math.PI * radius;
     const isBreak = session.phase === "break";
     const isBreakComplete = isBreak && !session.ends_at;
+    const linkedTask = store.data.tasks.find((task) => task.id === session.task_id);
+    const stateLabel = session.status === "paused" ? "Paused" : isBreakComplete ? "Break finished" : isBreak ? "Break" : "Focusing";
+
     return (
-      <main className="focus-screen relative flex min-h-dvh flex-col items-center justify-center bg-white px-5 py-8 text-center text-[#111111]">
-        <div className="absolute right-5 top-5 text-sm font-medium sm:right-8 sm:top-7">{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</div>
-        <Link href="/" className="absolute left-5 top-5 inline-flex items-center gap-2 text-sm text-[#666] sm:left-8 sm:top-7"><ArrowLeft className="h-4 w-4" /> Exit</Link>
-        <div className="mb-5 text-sm font-semibold tracking-[0.24em]">{session.status === "paused" ? "PAUSED" : isBreakComplete ? "BREAK COMPLETE" : isBreak ? "BREAK" : "FOCUS"}</div>
-        <h1 className="max-w-2xl text-2xl font-semibold sm:text-3xl">{isBreak ? "Stand up. Drink water. Rest your eyes." : session.focus_reason}</h1>
-        {session.task_id ? <div className="mt-2 text-sm text-[#666]">Linked task</div> : null}
-        <div className="relative my-7 h-[min(78vw,440px)] w-[min(78vw,440px)]">
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-label={`${formatCountdown(remaining)} remaining`}>
-            <circle className="focus-ring-track" cx="50" cy="50" r={radius} fill="none" strokeWidth="2" />
-            <circle className="focus-ring-progress" cx="50" cy="50" r={radius} fill="none" strokeWidth="2.4" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-[clamp(3.4rem,12vw,7rem)] font-semibold leading-none tabular-nums">{formatCountdown(remaining)}</div>
-            <div className="mt-3 text-sm text-[#666]">of {Math.ceil(phaseDuration / 60)} minutes</div>
+      <Page title="Focus" subtitle="One task, no distractions">
+        <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
+          <section className="flex min-h-[560px] flex-col items-center justify-center gap-5 rounded-card bg-[radial-gradient(circle_at_50%_35%,#2a2468,#14161c_72%)] px-5 py-8 text-center text-white shadow-card">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
+              {stateLabel} · session {session.session_number}
+            </span>
+            <div className="relative h-[min(70vw,320px)] w-[min(70vw,320px)]">
+              <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" role="img" aria-label={`${formatCountdown(remaining)} remaining`}>
+                <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4" className="stroke-white/15" />
+                <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} className="stroke-[#8f7cff] transition-[stroke-dashoffset] duration-700 ease-linear" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-[clamp(3.2rem,15vw,5.25rem)] font-bold leading-none tracking-[-0.04em] tabular-nums">{formatCountdown(remaining)}</div>
+                <div className="mt-2 text-sm text-[#b9b4e8]">of {Math.ceil(phaseDuration / 60)}:00</div>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">{isBreak ? "Stand up. Drink water. Rest your eyes." : session.focus_reason}</h2>
+              {linkedTask && !isBreak ? <p className="text-[#b9b4e8]">{linkedTask.steps?.length ? `Step ${Math.min(linkedTask.steps.filter((step) => step.done).length + 1, linkedTask.steps.length)} of ${linkedTask.steps.length}` : "Linked task"}</p> : null}
+            </div>
+            {isBreakComplete ? (
+              <Button variant="hero" size="lg" onClick={nextSession} icon={<Play className="h-4 w-4" />}>
+                Start next session
+              </Button>
+            ) : isBreak ? (
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button variant="heroGhost" size="lg" onClick={nextSession}>
+                  Skip break
+                </Button>
+                <Button variant="hero" size="lg" onClick={() => setFinishConfirmOpen(true)}>
+                  End focus
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <button type="button" aria-label="Finish session" onClick={() => setFinishConfirmOpen(true)} className="grid h-14 w-14 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+                  <Square className="h-5 w-5" />
+                </button>
+                <button type="button" aria-label={session.status === "paused" ? "Resume" : "Pause"} onClick={pauseOrResume} className="grid h-[76px] w-[76px] place-items-center rounded-full bg-white text-[#14161c]">
+                  {session.status === "paused" ? <Play className="h-7 w-7" fill="currentColor" /> : <Pause className="h-7 w-7" fill="currentColor" />}
+                </button>
+                <button type="button" aria-label="Skip to break" onClick={() => void startBreak()} className="grid h-14 w-14 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+                  <SkipForward className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+            {notice ? <p className="max-w-md text-sm text-[#b9b4e8]">{notice}</p> : null}
+          </section>
+
+          <div className="grid content-start gap-5">
+            <Card>
+              <CardHeader title="This session" />
+              <Row first className="py-2.5 text-sm">
+                <span className="flex-1 text-ink-2">Focus length</span>
+                <span className="font-semibold">{Math.round(session.focus_duration / 60)} min</span>
+              </Row>
+              <Row className="py-2.5 text-sm">
+                <span className="flex-1 text-ink-2">Break</span>
+                <span className="font-semibold">{Math.round(session.break_duration / 60)} min</span>
+              </Row>
+              <Row className="py-2.5 text-sm">
+                <span className="flex-1 text-ink-2">Long break after</span>
+                <span className="font-semibold">{session.long_break_after} sessions</span>
+              </Row>
+              <Row className="py-2.5 text-sm">
+                <span className="flex-1 text-ink-2">Sound</span>
+                <span className="font-semibold capitalize">{session.music_url ? "Your music" : session.music.replace("-", " ")}</span>
+              </Row>
+            </Card>
+            {todayCard}
           </div>
         </div>
-        {isBreakComplete ? (
-          <button onClick={nextSession} className="rounded-lg bg-black px-7 py-3 font-medium text-white"><Play className="mr-2 inline h-4 w-4" />Start Next Session</button>
-        ) : isBreak ? (
-          <div className="flex gap-3"><button onClick={nextSession} className="rounded-lg border border-[#dcdcdc] px-6 py-3 font-medium">Skip Break</button><button onClick={() => setFinishConfirmOpen(true)} className="rounded-lg bg-black px-6 py-3 font-medium text-white">End Focus</button></div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 sm:flex-row"><button onClick={pauseOrResume} className="rounded-lg bg-black px-7 py-3 font-medium text-white">{session.status === "paused" ? <Play className="mr-2 inline h-4 w-4" /> : <Pause className="mr-2 inline h-4 w-4" />}{session.status === "paused" ? "Resume" : "Pause"}</button><button onClick={() => setFinishConfirmOpen(true)} className="rounded-lg border border-[#dcdcdc] px-7 py-3 font-medium"><Square className="mr-2 inline h-4 w-4" />Finish Session</button></div>
-        )}
-        <div className="mt-7 text-sm text-[#666]">Session {session.session_number} of {session.long_break_after} · Next break: {Math.ceil(session.break_duration / 60)} min{session.music !== "none" ? ` · ${session.music}` : ""}</div>
-        {notice ? <div className="mt-4 max-w-md text-sm text-[#666]">{notice}</div> : null}
-        {finishConfirmOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="presentation" onMouseDown={() => setFinishConfirmOpen(false)}><div className="card w-full max-w-sm p-6 text-left" role="dialog" aria-modal="true" aria-labelledby="finish-focus-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="finish-focus-title" className="text-xl font-semibold">Finish this focus session?</h2><p className="mt-2 text-sm text-[#666]">Your actual focused time will be saved.</p><div className="mt-6 flex justify-end gap-3"><button onClick={() => setFinishConfirmOpen(false)} className="rounded-lg border border-[#dcdcdc] px-4 py-2 font-medium">Cancel</button><button onClick={() => { setFinishConfirmOpen(false); void finish(); }} className="rounded-lg bg-black px-4 py-2 font-medium text-white">Finish</button></div></div></div> : null}
-      </main>
+
+        <Sheet open={finishConfirmOpen} onClose={() => setFinishConfirmOpen(false)} title="Finish this focus session?" description="Your focused time is saved and the linked task is updated.">
+          <div className="flex gap-3">
+            <Button full onClick={() => setFinishConfirmOpen(false)}>
+              Keep going
+            </Button>
+            <Button
+              full
+              variant="primary"
+              onClick={() => {
+                setFinishConfirmOpen(false);
+                void finish();
+              }}
+            >
+              Finish
+            </Button>
+          </div>
+        </Sheet>
+      </Page>
     );
   }
 
-  const today = new Date().toDateString();
-  const todayHistory = history.filter((item) => new Date(item.created_at).toDateString() === today);
-  const totalToday = todayHistory.reduce((sum, item) => sum + item.focused_seconds, 0);
   return (
-    <main className="min-h-dvh bg-white px-4 py-6 text-[#111111] sm:px-8 sm:py-10">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between"><Link href="/" className="inline-flex items-center gap-2 text-sm text-[#666]"><ArrowLeft className="h-4 w-4" />Dashboard</Link><div className="text-sm font-medium">{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</div></div>
-        <div className="mt-10"><div className="text-sm font-semibold tracking-[0.2em]">FOCUS</div><h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Start a distraction-free session.</h1></div>
-        <form onSubmit={begin} className="mt-8 card grid gap-5 p-5 sm:p-7">
-          <label><span className="text-sm font-medium">What are you focusing on?</span><input required value={reason} onChange={(e) => setReason(e.target.value)} className="mt-2 w-full rounded-lg border border-[#dcdcdc] px-3 py-3 outline-none focus:border-black" placeholder="Study Linear Algebra" /></label>
-          <label><span className="text-sm font-medium">Optional linked task</span><select value={taskId} onChange={(e) => { setTaskId(e.target.value); const task = store.data.tasks.find((item) => item.id === e.target.value); if (task) setReason(task.title); }} className="mt-2 w-full rounded-lg border border-[#dcdcdc] px-3 py-3"><option value="">None</option>{store.data.tasks.filter((task) => task.status !== "completed").map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
-          <DurationField label="Focus Time" value={focusMinutes} options={focusOptions} onChange={setFocusMinutes} />
-          <DurationField label="Break Time" value={breakMinutes} options={breakOptions} onChange={setBreakMinutes} />
-          <div className="grid gap-4 sm:grid-cols-2"><SelectField label="Break Frequency" value={breakFrequency} onChange={setBreakFrequency} options={[1,2,3,4].map((n) => [n, n === 1 ? "After every session" : `After ${n} sessions`] as [number,string])} /><DurationField label="Long Break" value={longBreakMinutes} options={[15,20,25,30]} onChange={setLongBreakMinutes} /></div>
-          <SelectField label="Long break after" value={longBreakAfter} onChange={setLongBreakAfter} options={[2,3,4,5].map((n) => [n, `${n} sessions`] as [number,string])} />
-          <div className="grid gap-4 sm:grid-cols-2"><label><span className="text-sm font-medium">Music / Focus Sound</span><select value={music} onChange={(e) => setMusic(e.target.value)} className="mt-2 w-full rounded-lg border border-[#dcdcdc] px-3 py-3"><option value="none">None</option><option value="rain">Rain</option><option value="brown-noise">Brown Noise</option><option value="white-noise">White Noise</option><option value="ambient">Ambient</option></select></label><label><span className="text-sm font-medium">Music URL</span><input type="url" value={musicUrl} onChange={(e) => setMusicUrl(e.target.value)} className="mt-2 w-full rounded-lg border border-[#dcdcdc] px-3 py-3" placeholder="https://…" /></label></div>
-          <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={autoStart} onChange={(e) => setAutoStart(e.target.checked)} className="h-5 w-5 accent-black" /> Automatically start after breaks</label>
-          <button className="mt-1 rounded-lg bg-black px-6 py-3.5 font-semibold text-white"><Play className="mr-2 inline h-4 w-4" />Start Focus</button>
-          {notice ? <p className="text-sm text-[#666]">{notice}</p> : null}
-        </form>
-        <section className="mt-8 border-t border-[#e5e5e5] pt-7"><div className="flex items-end justify-between"><div><div className="text-sm font-semibold uppercase tracking-wider">Today</div><div className="mt-2 text-2xl font-semibold">{formatFocused(totalToday)} Focused</div></div><div className="text-sm text-[#666]">{todayHistory.length} Sessions</div></div><div className="mt-5 space-y-3">{todayHistory.slice(0,5).map((item) => <div key={item.id} className="flex justify-between border-b border-[#e5e5e5] pb-3"><span>{item.focus_reason}</span><span className="text-[#666]">{formatFocused(item.focused_seconds)}</span></div>)}</div></section>
+    <Page title="Focus" subtitle="One task, no distractions">
+      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <Card>
+          <form onSubmit={begin} className="grid gap-4">
+            <Field label="What are you focusing on?">
+              <TextInput required value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Study linear algebra" />
+            </Field>
+            <Field label="Link to a task (optional)" hint="Finishing the session updates the task's progress.">
+              <SelectInput
+                value={taskId}
+                onChange={(event) => {
+                  setTaskId(event.target.value);
+                  const task = store.data.tasks.find((item) => item.id === event.target.value);
+                  if (task) {
+                    setReason(task.title);
+                    if (task.estimatedMinutes > 0) setFocusMinutes(task.estimatedMinutes <= 20 ? 15 : task.estimatedMinutes <= 35 ? 25 : task.estimatedMinutes <= 60 ? 45 : 50);
+                  }
+                }}
+              >
+                <option value="">None</option>
+                {openTasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.title}
+                  </option>
+                ))}
+              </SelectInput>
+            </Field>
+            <DurationField label="Focus" value={focusMinutes} options={focusOptions} onChange={setFocusMinutes} />
+            <DurationField label="Break" value={breakMinutes} options={breakOptions} onChange={setBreakMinutes} />
+            <div>
+              <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">Sound</span>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+                {[
+                  ["none", "Silence"],
+                  ["rain", "Rain"],
+                  ["brown-noise", "Brown noise"],
+                  ["white-noise", "White noise"],
+                  ["ambient", "Ambient"]
+                ].map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={music === value} onClick={() => setMusic(value)} className={cn("h-11 rounded-xl border px-3 text-sm font-semibold", music === value ? "border-accent bg-accent-soft/60 text-accent" : "border-line hover:bg-surface-2")}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <details className="rounded-xl border border-line px-3.5 py-3">
+              <summary className="cursor-pointer text-sm font-semibold">More options</summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <SelectField label="Take a break" value={breakFrequency} onChange={setBreakFrequency} options={[1, 2, 3, 4].map((n) => [n, n === 1 ? "After every session" : `After ${n} sessions`] as [number, string])} />
+                <SelectField label="Long break after" value={longBreakAfter} onChange={setLongBreakAfter} options={[2, 3, 4, 5].map((n) => [n, `${n} sessions`] as [number, string])} />
+                <SelectField label="Long break length" value={longBreakMinutes} onChange={setLongBreakMinutes} options={[15, 20, 25, 30].map((n) => [n, `${n} min`] as [number, string])} />
+                <Field label="Music link (optional)">
+                  <TextInput type="url" value={musicUrl} onChange={(event) => setMusicUrl(event.target.value)} placeholder="https://…" />
+                </Field>
+                <label className="flex items-center gap-3 text-sm font-medium sm:col-span-2">
+                  <Toggle checked={autoStart} onChange={setAutoStart} label="Start the next session automatically" />
+                  Start the next session automatically
+                </label>
+              </div>
+            </details>
+            <Button type="submit" variant="primary" size="lg" icon={<Play className="h-4 w-4" fill="currentColor" />}>
+              Start focus
+            </Button>
+            {notice ? <Notice tone="amber">{notice}</Notice> : null}
+          </form>
+        </Card>
+        <div className="grid content-start gap-5">{todayCard}</div>
       </div>
-    </main>
+    </Page>
   );
 }
 
 function DurationField({ label, value, options, onChange }: { label: string; value: number; options: number[]; onChange: (value: number) => void }) {
   const custom = !options.includes(value);
-  return <label><span className="text-sm font-medium">{label}</span><div className="mt-2 flex gap-2"><select value={custom ? "custom" : value} onChange={(e) => e.target.value !== "custom" && onChange(Number(e.target.value))} className="min-w-0 flex-1 rounded-lg border border-[#dcdcdc] px-3 py-3">{options.map((n) => <option key={n} value={n}>{n} min</option>)}<option value="custom">Custom</option></select>{custom ? <input type="number" min="1" value={value} onChange={(e) => onChange(Math.max(1, Number(e.target.value)))} className="w-24 rounded-lg border border-[#dcdcdc] px-3" aria-label={`Custom ${label} minutes`} /> : <button type="button" onClick={() => onChange(options[0] + 1)} className="rounded-lg border border-[#dcdcdc] px-3 text-sm">Custom</button>}</div></label>;
+  return (
+    <div>
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{label}</span>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Segmented label={`${label} minutes`} value={custom ? "custom" : String(value)} onChange={(next) => onChange(next === "custom" ? options[0] + 1 : Number(next))} options={[...options.map((option) => ({ value: String(option), label: `${option} min` })), { value: "custom", label: "Custom" }]} />
+        {custom ? <TextInput type="number" min={1} max={240} value={value} onChange={(event) => onChange(Math.max(1, Number(event.target.value)))} aria-label={`Custom ${label} minutes`} className="h-10 w-24" /> : null}
+      </div>
+    </div>
+  );
 }
 
-function SelectField({ label, value, options, onChange }: { label: string; value: number; options: [number,string][]; onChange: (value: number) => void }) {
-  return <label><span className="text-sm font-medium">{label}</span><select value={value} onChange={(e) => onChange(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-[#dcdcdc] px-3 py-3">{options.map(([key,text]) => <option key={key} value={key}>{text}</option>)}</select></label>;
+function SelectField({ label, value, options, onChange }: { label: string; value: number; options: [number, string][]; onChange: (value: number) => void }) {
+  return (
+    <Field label={label}>
+      <SelectInput value={value} onChange={(event) => onChange(Number(event.target.value))}>
+        {options.map(([key, text]) => (
+          <option key={key} value={key}>
+            {text}
+          </option>
+        ))}
+      </SelectInput>
+    </Field>
+  );
 }

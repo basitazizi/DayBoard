@@ -1,5 +1,5 @@
-import { DayBoardApp } from "@/components/dayboard-app";
+import { DisplayPage } from "@/components/pages/display";
 
-export default function DisplayPage() {
-  return <DayBoardApp screen="display" />;
+export default function Page() {
+  return <DisplayPage />;
 }

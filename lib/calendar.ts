@@ -1,9 +1,9 @@
 import type { CalendarEvent } from "@/types/dayboard";
-import { minutesFromTime } from "./date-utils";
+import { getLocalDateKey, minutesFromTime, nowMinutes } from "./date-utils";
 
 export function getEventStatus(event: CalendarEvent, now = new Date()) {
-  const currentKey = now.toISOString().slice(0, 10);
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentKey = getLocalDateKey(now);
+  const currentMinutes = nowMinutes(now);
 
   if (event.date !== currentKey) {
     return event.date < currentKey ? "finished" : "upcoming";

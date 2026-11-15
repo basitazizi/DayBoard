@@ -21,6 +21,15 @@ export type EventCategory =
 
 export type CalendarView = "month" | "week" | "day";
 
+export type Tone = "accent" | "teal" | "blue" | "amber" | "rose" | "green" | "neutral";
+
+export interface TaskStep {
+  id: string;
+  title: string;
+  done: boolean;
+  minutes?: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -34,6 +43,8 @@ export interface Task {
   category: string;
   progressPercent: number;
   autoRollover: boolean;
+  steps?: TaskStep[];
+  courseId?: string;
   createdAt: string;
   completedAt?: string;
 }
@@ -50,6 +61,7 @@ export interface CalendarEvent {
   description?: string;
   priority: TaskPriority;
   linkedTaskId?: string;
+  autoPlanned?: boolean;
   repeatType?: "never" | "daily" | "weekdays" | "weekly" | "biweekly" | "monthly" | "custom";
   repeatDays?: number[];
 }
@@ -99,6 +111,9 @@ export interface Course {
   days: string;
   time: string;
   room: string;
+  startTime?: string;
+  endTime?: string;
+  color?: Tone;
 }
 
 export interface Assignment {
@@ -112,6 +127,7 @@ export interface Assignment {
   actualMinutes: number;
   gradeWeight?: number;
   difficulty: number;
+  score?: number;
   status: "not_started" | "in_progress" | "submitted" | "graded";
 }
 
@@ -125,6 +141,7 @@ export interface Exam {
   studyMinutesGoal: number;
   studyMinutesCompleted: number;
   importanceScore: number;
+  score?: number;
 }
 
 export interface DayBoardData {

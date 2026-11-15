@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { ArrowLeft, CalendarDays, Camera, Check, Eye, EyeOff, Sparkles } from "lucide-react";
 import { useSupabaseAuth } from "@/lib/auth";
-import { cn } from "@/lib/cn";
+import { localTimezone } from "@/lib/date-utils";
+import { supabase } from "@/lib/supabase";
+import { Button, Field, Notice, Segmented, TextInput } from "./ui";
 
 type AuthMode = "signin" | "signup";
 
@@ -23,9 +24,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!auth.loading && auth.user) {
-      router.replace("/");
-    }
+    if (!auth.loading && auth.user) router.replace("/");
   }, [auth.loading, auth.user, router]);
 
   async function submit(event: FormEvent) {
@@ -36,7 +35,6 @@ export function LoginPage() {
 
     const normalizedEmail = email.trim();
     const normalizedName = displayName.trim().slice(0, 80);
-
     if (mode === "signup" && !normalizedName) {
       setSubmitting(false);
       setError("Enter a display name.");
@@ -45,142 +43,93 @@ export function LoginPage() {
 
     const result =
       mode === "signup"
-        ? await supabase.auth.signUp({
-            email: normalizedEmail,
-            password,
-            options: {
-              data: {
-                display_name: normalizedName,
-                timezone: "America/Los_Angeles"
-              }
-            }
-          })
-        : await supabase.auth.signInWithPassword({
-            email: normalizedEmail,
-            password
-          });
+        ? await supabase.auth.signUp({ email: normalizedEmail, password, options: { data: { display_name: normalizedName, timezone: localTimezone() } } })
+        : await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
     setSubmitting(false);
-
     if (result.error) {
       setError(result.error.message);
       return;
     }
-
     if (mode === "signup" && !result.data.session) {
-      setMessage("Account created. Check your email to confirm your account, then sign in.");
+      setMessage("Account created. Check your email to confirm it, then sign in.");
       setMode("signin");
       return;
     }
-
     router.replace("/");
   }
 
   return (
-    <main className="min-h-dvh bg-white text-[#111111]">
+    <main className="min-h-dvh bg-bg text-ink">
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="hidden border-r border-[#e5e5e5] px-10 py-10 lg:flex lg:flex-col">
-          <Link href="/" className="mb-16 inline-flex w-fit items-center gap-2 text-sm font-medium text-[#555]">
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </Link>
-          <div className="flex items-center gap-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-black">
-              <Check className="h-9 w-9" strokeWidth={2.4} />
-            </div>
-            <div>
-              <div className="text-3xl font-semibold">DayBoard</div>
-              <div className="mt-1 text-lg text-[#555]">Plan. Focus. Achieve.</div>
-            </div>
+        <section className="hero-gradient m-4 hidden flex-col rounded-[28px] p-10 text-white lg:flex">
+          <div className="flex items-center gap-3 text-2xl font-bold tracking-[-0.02em]">
+            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-white text-[#3b2fd0]">
+              <Check className="h-6 w-6" strokeWidth={3} />
+            </span>
+            DayBoard
           </div>
           <div className="mt-auto">
-            <p className="max-w-md text-4xl font-semibold leading-tight">Your phone controls the day. Your LCD keeps it visible.</p>
-            <p className="mt-5 max-w-md text-lg leading-8 text-[#555]">
-              Sign in once and DayBoard can later sync tasks, calendar, habits, and notes across your devices.
-            </p>
+            <p className="max-w-md text-4xl font-bold leading-tight tracking-[-0.02em]">Know what to do next, and add anything in one step.</p>
+            <ul className="mt-8 grid gap-4 text-lg text-white/90">
+              <li className="flex items-center gap-3">
+                <CalendarDays className="h-5 w-5 shrink-0" /> Classes, tasks, exams and habits in one place
+              </li>
+              <li className="flex items-center gap-3">
+                <Camera className="h-5 w-5 shrink-0" /> Type it, say it or snap a photo to add it
+              </li>
+              <li className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 shrink-0" /> An assistant that plans your study time
+              </li>
+            </ul>
           </div>
         </section>
 
         <section className="flex items-center justify-center px-5 py-10">
           <div className="w-full max-w-md">
-            <Link href="/" className="mb-10 inline-flex items-center gap-2 text-sm font-medium text-[#555] lg:hidden">
+            <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-ink-2 hover:text-ink">
               <ArrowLeft className="h-4 w-4" />
-              Back
+              Continue without an account
             </Link>
+            <h1 className="text-3xl font-bold tracking-[-0.02em]">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+            <p className="mb-6 mt-2 text-ink-2">{mode === "signin" ? "Sign in to see your DayBoard on every device." : "Your account keeps your data in sync across your phone, laptop and wall display."}</p>
 
-            <div className="mb-8">
-              <h1 className="text-3xl font-semibold">{mode === "signin" ? "Sign in" : "Create account"}</h1>
-              <p className="mt-3 text-[#666]">
-                {mode === "signin" ? "Use your DayBoard account on your phone and LCD." : "Create the account that will own your DayBoard data."}
-              </p>
-            </div>
+            <Segmented
+              label="Sign in or sign up"
+              className="mb-5 w-full [&>button]:flex-1"
+              value={mode}
+              onChange={(next) => {
+                setMode(next);
+                setError(null);
+              }}
+              options={[
+                { value: "signin", label: "Sign in" },
+                { value: "signup", label: "Sign up" }
+              ]}
+            />
 
-            <div className="mb-6 grid grid-cols-2 rounded-lg border border-[#e0e0e0] p-1">
-              <button
-                onClick={() => setMode("signin")}
-                className={cn("rounded-md px-4 py-2 text-sm font-medium text-[#555]", mode === "signin" && "bg-black text-white")}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => setMode("signup")}
-                className={cn("rounded-md px-4 py-2 text-sm font-medium text-[#555]", mode === "signup" && "bg-black text-white")}
-              >
-                Sign up
-              </button>
-            </div>
-
-            <form onSubmit={submit} className="card p-5">
+            <form onSubmit={submit} className="grid gap-4 rounded-card border border-line bg-surface p-5 shadow-card">
               {mode === "signup" ? (
-                <label className="mb-4 block">
-                  <span className="text-sm font-medium text-[#666]">Display name</span>
-                  <input
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    required
-                    maxLength={80}
-                    className="mt-1 h-12 w-full rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black"
-                    placeholder="Your name"
-                  />
-                </label>
+                <Field label="Display name">
+                  <TextInput value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={80} placeholder="Your name" autoComplete="name" />
+                </Field>
               ) : null}
-
-              <label className="mb-4 block">
-                <span className="text-sm font-medium text-[#666]">Email</span>
-                <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  type="email"
-                  required
-                  className="mt-1 h-12 w-full rounded-lg border border-[#dcdcdc] px-3 outline-none focus:border-black"
-                  placeholder="you@example.com"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-[#666]">Password</span>
-                <div className="mt-1 flex h-12 rounded-lg border border-[#dcdcdc] focus-within:border-black">
-                  <input
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    className="w-full rounded-lg px-3 outline-none"
-                    placeholder="At least 6 characters"
-                  />
-                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="px-3" aria-label={showPassword ? "Hide password" : "Show password"}>
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              <Field label="Email">
+                <TextInput value={email} onChange={(event) => setEmail(event.target.value)} type="email" required placeholder="you@example.com" autoComplete="email" />
+              </Field>
+              <Field label="Password">
+                <div className="relative">
+                  <TextInput value={password} onChange={(event) => setPassword(event.target.value)} type={showPassword ? "text" : "password"} required minLength={6} placeholder="At least 6 characters" autoComplete={mode === "signin" ? "current-password" : "new-password"} className="pr-11" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-1 top-1 grid h-9 w-9 place-items-center rounded-lg text-ink-2 hover:bg-track" aria-label={showPassword ? "Hide password" : "Show password"}>
+                    {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
                 </div>
-              </label>
-
-              {error ? <div className="mt-4 rounded-lg border border-[#ef4444] p-3 text-sm text-[#991b1b]">{error}</div> : null}
-              {message ? <div className="mt-4 rounded-lg border border-[#dcdcdc] bg-[#fafafa] p-3 text-sm">{message}</div> : null}
-
-              <button disabled={submitting} className="mt-5 h-12 w-full rounded-lg bg-black font-semibold text-white disabled:opacity-50">
-                {submitting ? "Please wait..." : mode === "signin" ? "Login" : "Create account"}
-              </button>
+              </Field>
+              {error ? <Notice tone="rose">{error}</Notice> : null}
+              {message ? <Notice tone="green">{message}</Notice> : null}
+              <Button type="submit" variant="primary" size="lg" disabled={submitting}>
+                {submitting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+              </Button>
             </form>
           </div>
         </section>

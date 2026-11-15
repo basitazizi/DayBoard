@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.cal{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:28px repeat(5,1fr);flex:1;min-height:0;border-top:1px solid var(--line)}
+.dw{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink3);padding:8px 10px 0}
+.d{border-top:1px solid var(--line);border-left:1px solid var(--line);padding:7px 8px;display:flex;flex-direction:column;gap:4px;min-height:0;overflow:hidden}
+.d:nth-child(7n+1){border-left:0}
+.d .n{font-size:13px;font-weight:600;width:26px;height:26px;display:grid;place-items:center;border-radius:50%}
+.d.off .n{color:var(--ink3)}.d.now{background:#FAF9FF}.d.now .n{background:var(--accent);color:#fff}
+.e{font-size:11.500px;font-weight:600;padding:3px 7px;border-radius:6px;background:var(--cs);color:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+<body data-page="calendar" data-title="Calendar" data-sub="Classes, tasks, exams and habits in one place">
+<main><div class="g f1">
+<div class="card f1 col" style="gap:0;padding:20px 20px 0">
+  <div class="hd" style="margin-bottom:16px"><div class="row"><h2 style="font-size:20px;white-space:nowrap">November 2026</h2><div class="ib"><i data-i="left" data-s="17"></i></div><div class="ib"><i data-i="right" data-s="17"></i></div><div class="btn s">Today</div></div>
+  <div class="row"><span class="chip k te">Classes</span><span class="chip k ac">Tasks</span><span class="chip k am">Exams</span><span class="chip k gr">Habits</span><div class="seg"><span class="on">Month</span><span>Week</span><span>Day</span></div></div></div>
+  <div class="cal" id="cal"></div>
+</div>
+<div class="col" style="width:340px;gap:20px">
+  <div class="card f1">
+    <div class="lb">Monday</div><div class="big" style="margin:4px 0 10px">Nov 16</div>
+    <div class="li first te"><div class="stripe"></div><div class="f1"><div class="b">Chemistry lab</div><div class="mu sm">9:00 – 10:15 AM</div></div></div>
+    <div class="li ac"><div class="stripe"></div><div class="f1"><div class="b">Calc problem set 7</div><div class="mu sm">11:00 AM · due 11:59 PM</div></div></div>
+    <div class="li ro"><div class="stripe"></div><div class="f1"><div class="b">English Lit seminar</div><div class="mu sm">1:30 – 2:45 PM</div></div></div>
+    <div class="li am"><div class="stripe"></div><div class="f1"><div class="b">Biology study session 1</div><div class="mu sm">3:30 – 4:20 PM</div></div></div>
+    <div class="li gr"><div class="stripe"></div><div class="f1"><div class="b">Gym</div><div class="mu sm">6:00 PM</div></div></div>
+  </div>
+  <div class="card ai">
+    <div class="row" style="gap:8px;color:var(--accent)"><i data-i="sparkle" data-s="17"></i><span class="b sm">Free time found</span></div>
+    <div style="margin:8px 0 12px">You're free <b>4:30 – 6:00 PM</b>. Want to use it for the History essay draft?</div>
+    <div class="row" style="gap:8px"><div class="btn p s">Schedule it</div><div class="btn s">Not now</div></div>
+  </div>
+</div>
+</div></main>
+<script>
+const ev={2:[['Chem lab','te']],3:[['Calc II','bl']],4:[['Lit seminar','ro']],5:[['Bio lecture','am']],6:[['Quiz: Calc','am'],['Gym','gr']],9:[['Chem lab','te'],['Set 6 due','ac']],10:[['Calc II','bl']],11:[['Lit seminar','ro'],['Gym','gr']],12:[['Bio lecture','am']],13:[['Lab report due','ac']],16:[['Chem lab','te'],['Calc set 7 due','ac'],['+3 more','']],17:[['Calc II','bl'],['Bio study 2','am']],18:[['History draft due','ac'],['Lit seminar','ro']],19:[['Bio study 3','am'],['Gym','gr']],20:[['Biology midterm','am']],23:[['Chem lab','te']],24:[['Calc II','bl']],25:[['Bio essay due','ac']],26:[['Thanksgiving','gr']],30:[['Chem lab','te'],['Calc II','bl']]};
+let h=['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d=>'<div class="dw">'+d+'</div>').join('');
+for(let i=1;i<=35;i++){const off=i>30,n=off?i-30:i;h+='<div class="d'+(off?' off':'')+(i==16?' now':'')+'"><div class="n">'+n+'</div>'+(off?'':(ev[i]||[]).map(e=>'<div class="e '+e[1]+'"'+(e[1]?'':' style="background:none;color:var(--ink3)"')+'>'+e[0]+'</div>').join(''))+'</div>'}
+document.getElementById('cal').innerHTML=h;
+</script><script src="shell.js"></script>

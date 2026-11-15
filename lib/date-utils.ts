@@ -1,11 +1,12 @@
-const DATE_KEY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Los_Angeles",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit"
-});
+export function localTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles";
+  } catch {
+    return "America/Los_Angeles";
+  }
+}
 
-export function getLocalDateKey(date = new Date(), timezone = "America/Los_Angeles") {
+export function getLocalDateKey(date = new Date(), timezone = localTimezone()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",
@@ -15,7 +16,7 @@ export function getLocalDateKey(date = new Date(), timezone = "America/Los_Angel
 }
 
 export function todayKey() {
-  return DATE_KEY_FORMATTER.format(new Date());
+  return getLocalDateKey(new Date());
 }
 
 export function addDays(dateKey: string, days: number) {
@@ -24,7 +25,7 @@ export function addDays(dateKey: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export function formatDisplayDate(date: Date, timezone = "America/Los_Angeles") {
+export function formatDisplayDate(date: Date, timezone = localTimezone()) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     weekday: "long",
@@ -35,7 +36,7 @@ export function formatDisplayDate(date: Date, timezone = "America/Los_Angeles") 
     .toUpperCase();
 }
 
-export function formatMobileDate(date: Date, timezone = "America/Los_Angeles") {
+export function formatMobileDate(date: Date, timezone = localTimezone()) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     weekday: "long",
@@ -51,7 +52,7 @@ export function formatMonthYear(dateKey: string) {
   }).format(new Date(`${dateKey}T12:00:00`));
 }
 
-export function formatClock(date: Date, timezone = "America/Los_Angeles", showSeconds = false) {
+export function formatClock(date: Date, timezone = localTimezone(), showSeconds = false) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "numeric",
@@ -132,3 +133,18 @@ export function getWeekDays(dateKey: string) {
     return item.toISOString().slice(0, 10);
   });
 }
+
+export function timeFromMinutes(total: number) {
+  const safe = Math.max(0, Math.min(24 * 60 - 1, Math.round(total)));
+  return String(Math.floor(safe / 60)).padStart(2, "0") + ":" + String(safe % 60).padStart(2, "0");
+}
+
+export function nowMinutes(date = new Date(), timezone = localTimezone()) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(date).split(":").map(Number);
+  return (parts[0] % 24) * 60 + parts[1];
+}
+
+export function weekdayOf(dateKey: string) {
+  return new Date(dateKey + "T12:00:00").getDay();
+}
+
