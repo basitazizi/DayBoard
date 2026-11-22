@@ -73,7 +73,7 @@ export function HabitsPage() {
           <Card>
             <div className="mb-2 flex items-center gap-3">
               <h2 className="flex-1 text-base font-semibold">Last 7 days</h2>
-              <div className="flex gap-1.5 sm:gap-2.5">
+              <div className="hidden gap-2.5 sm:flex">
                 {week.map((date) => (
                   <span key={date} className={cn("w-7 text-center text-[11px] font-bold uppercase sm:w-[30px]", date === today ? "text-accent" : "text-ink-3")}>
                     {"SMTWTFS"[weekdayOf(date)]}
@@ -87,31 +87,39 @@ export function HabitsPage() {
               return (
                 <div key={habit.id} className={cn("flex flex-wrap items-center gap-3 py-3.5 sm:flex-nowrap", index > 0 && "border-t border-line")}>
                   <IconTile tone={tone}>{ICONS[habit.icon]}</IconTile>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">
                     <div className="truncate font-semibold">{habit.name}</div>
                     <div className="flex items-center gap-1 text-[13px] text-ink-2">
                       {habit.streak > 0 ? <Flame className="h-3.5 w-3.5 text-amber" /> : null}
                       {habit.streak > 0 ? `${habit.streak} day streak` : habit.scheduleType === "weekly" ? `${habit.targetTimesPerWeek ?? 3} times a week` : "Start a streak today"}
                     </div>
                   </div>
-                  <div className="flex gap-1.5 sm:gap-2.5">
+                  <div className="grid w-full grid-cols-7 justify-items-center gap-1 sm:flex sm:w-auto sm:gap-2.5">
                     {week.map((date) => {
                       const isDone = done.has(`${habit.id}|${date}`);
                       const needed = required(habit, date);
                       return (
-                        <button
-                          key={date}
-                          type="button"
-                          aria-label={`${habit.name} on ${date}: ${isDone ? "done" : "not done"}`}
-                          aria-pressed={isDone}
-                          onClick={() => store.toggleHabit(habit.id, date)}
-                          className={cn(
-                            "grid h-7 w-7 place-items-center rounded-[9px] text-white transition-colors sm:h-[30px] sm:w-[30px]",
-                            isDone ? TONE[tone].solid : date === today && needed ? cn("border-2 border-dashed bg-transparent", TONE[tone].border) : needed ? "bg-track hover:bg-line" : "bg-track/40"
-                          )}
-                        >
-                          {isDone ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
-                        </button>
+                        <span key={date} className="flex flex-col items-center gap-1">
+                          <span className={cn("text-[10px] font-bold uppercase sm:hidden", date === today ? "text-accent" : "text-ink-3")}>{"SMTWTFS"[weekdayOf(date)]}</span>
+                          <button
+                            type="button"
+                            aria-label={`${habit.name} on ${date}: ${isDone ? "done" : "not done"}`}
+                            aria-pressed={isDone}
+                            onClick={() => store.toggleHabit(habit.id, date)}
+                            className={cn(
+                              "grid h-8 w-8 place-items-center rounded-[9px] text-white transition-colors sm:h-[30px] sm:w-[30px]",
+                              isDone
+                                ? cn(TONE[tone].solid, tone === "accent" && "text-on-accent")
+                                : date === today && needed
+                                  ? cn("border-2 border-dashed bg-transparent", TONE[tone].border)
+                                  : needed
+                                    ? "bg-track hover:bg-line"
+                                    : "bg-track/40"
+                            )}
+                          >
+                            {isDone ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
+                          </button>
+                        </span>
                       );
                     })}
                   </div>
@@ -165,7 +173,11 @@ export function HabitsPage() {
               />
               <div className="grid max-w-[330px] grid-cols-7 gap-1.5" role="img" aria-label="Habit completion for the last five weeks">
                 {heatmap.map((cell) => (
-                  <span key={cell.date} title={`${cell.date}: ${cell.count} of ${data.habits.length} done`} className={cn("aspect-square rounded-[7px]", cell.future ? "bg-track/40" : HEAT[cell.level], cell.date === today && "ring-2 ring-accent ring-offset-1 ring-offset-surface")} />
+                  <span
+                    key={cell.date}
+                    title={`${cell.date}: ${cell.count} of ${data.habits.length} done`}
+                    className={cn("aspect-square rounded-[7px]", cell.future ? "bg-track/40" : HEAT[cell.level], cell.date === today && "ring-2 ring-accent ring-offset-1 ring-offset-surface")}
+                  />
                 ))}
               </div>
             </Card>
