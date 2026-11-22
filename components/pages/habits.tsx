@@ -3,7 +3,7 @@
 import { BookOpen, Check, Droplets, Dumbbell, Flame, Leaf, Plus, Sparkles, Target, Trash2 } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { addDays, getLocalDateKey, weekdayOf } from "@/lib/date-utils";
+import { addDays, getLocalDateKey, getWeekStart, weekdayOf } from "@/lib/date-utils";
 import { getFindings } from "@/lib/findings";
 import type { Habit, Tone } from "@/types/dayboard";
 import { useApp } from "../app-context";
@@ -33,7 +33,7 @@ export function HabitsPage() {
   const consistency = weekRequired ? Math.round((weekDone / weekRequired) * 100) : 0;
 
   const heatmap = useMemo(() => {
-    const end = addDays(today, 6 - weekdayOf(today));
+    const end = addDays(today, 6 - ((weekdayOf(today) - getWeekStart() + 7) % 7));
     return Array.from({ length: 35 }, (_, index) => {
       const date = addDays(end, index - 34);
       const count = data.habits.filter((habit) => done.has(`${habit.id}|${date}`)).length;

@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, Camera, Check, CheckSquare, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Camera, CheckSquare, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Search, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
 import { clearGuestItems, countGuestItems } from "@/lib/local-data";
 import { AppProvider, useApp } from "./app-context";
+import { CommandPalette, openSearch } from "./command-palette";
+import { Avatar } from "./avatar";
+import { LogoMark } from "./logo-mark";
+import { useTheme } from "@/lib/theme";
 import { QuickAdd } from "./quick-add";
 import { Button, IconButton, Sheet } from "./ui";
 
@@ -38,9 +42,7 @@ function isActive(pathname: string, href: string) {
 export function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" className={cn("flex items-center gap-2.5 text-lg font-bold tracking-[-0.02em]", className)}>
-      <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-accent text-on-accent">
-        <Check className="h-[18px] w-[18px]" strokeWidth={3} />
-      </span>
+      <LogoMark size={32} />
       DayBoard
     </Link>
   );
@@ -63,8 +65,8 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 function Sidebar() {
   const pathname = usePathname();
   const { auth, store } = useApp();
+  const { profile } = useTheme();
   const name = auth.displayName || (auth.user ? auth.user.email?.split("@")[0] : "Guest") || "Guest";
-  const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[236px] shrink-0 flex-col gap-1 border-r border-line bg-surface-2 px-3.5 pb-3.5 pt-5 lg:flex">
@@ -86,10 +88,10 @@ function Sidebar() {
       ) : null}
       <SidebarLink item={SETTINGS_NAV} active={isActive(pathname, SETTINGS_NAV.href)} />
       <Link href="/settings" className="mt-2 flex items-center gap-2.5 border-t border-line px-2.5 pt-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#ffb86b] to-[#e0476b] text-[13px] font-bold text-white">{initials || "G"}</span>
+        <Avatar profile={profile} name={name} size={36} />
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-semibold">{name}</span>
-          <span className="block truncate text-xs text-ink-3">{auth.user ? auth.user.email : "Not signed in"}</span>
+          <span className="block truncate text-xs text-ink-3">{profile.tagline || (auth.user ? auth.user.email : "Not signed in")}</span>
         </span>
       </Link>
     </aside>
@@ -270,6 +272,44 @@ function AddBox() {
   );
 }
 
+const CONFETTI_COLOURS = ["var(--accent)", "#ffb86b", "#5dd48a", "#6aa5f5", "#f584cd", "#ffd84d"];
+
+/** A short burst of confetti when something is finished. Turn it off in Settings. */
+function Confetti() {
+  const { celebration } = useApp();
+  const [pieces, setPieces] = useState<Array<{ id: number; left: number; delay: number; dx: number; spin: number; fall: number; colour: string }>>([]);
+
+  useEffect(() => {
+    if (!celebration) return;
+    setPieces(
+      Array.from({ length: 46 }, (_, index) => ({
+        id: celebration + index,
+        left: 10 + Math.random() * 80,
+        delay: Math.random() * 180,
+        dx: (Math.random() - 0.5) * 260,
+        spin: (Math.random() - 0.5) * 900,
+        fall: 1100 + Math.random() * 700,
+        colour: CONFETTI_COLOURS[index % CONFETTI_COLOURS.length]
+      }))
+    );
+    const timer = window.setTimeout(() => setPieces([]), 2200);
+    return () => window.clearTimeout(timer);
+  }, [celebration]);
+
+  if (!pieces.length) return null;
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[70] overflow-hidden">
+      {pieces.map((piece) => (
+        <span
+          key={piece.id}
+          className="confetti-piece"
+          style={{ left: `${piece.left}%`, background: piece.colour, animationDelay: `${piece.delay}ms`, ["--dx" as string]: `${piece.dx}px`, ["--spin" as string]: `${piece.spin}deg`, ["--fall" as string]: `${piece.fall}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Standard page frame: the same header and spacing on every screen. */
 export function Page({ title, subtitle, toolbar, children, fill }: { title: string; subtitle?: string; toolbar?: ReactNode; children: ReactNode; fill?: boolean }) {
   const { store } = useApp();
@@ -282,6 +322,9 @@ export function Page({ title, subtitle, toolbar, children, fill }: { title: stri
           {subtitle ? <p className="truncate text-[13px] text-ink-3">{subtitle}</p> : null}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
+          <IconButton label="Search (Ctrl+K)" tone="soft" className="h-10 w-10 lg:h-[46px] lg:w-[46px] lg:rounded-[14px] lg:border lg:border-line lg:bg-surface" onClick={openSearch}>
+            <Search className="h-[18px] w-[18px]" />
+          </IconButton>
           <AddBox />
           {pathname.startsWith("/assistant") ? null : (
             <Button variant="primary" href="/assistant" icon={<Sparkles className="h-[17px] w-[17px]" />}>
@@ -325,12 +368,14 @@ function PageSkeleton() {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppProvider>
-      <div data-app-shell className="flex min-h-dvh bg-bg text-ink">
+      <div data-app-shell className="flex min-h-dvh text-ink">
         <Sidebar />
         <div className="flex min-h-dvh min-w-0 flex-1 flex-col pb-[76px] lg:pb-0">{children}</div>
         <MobileNav />
         <QuickAdd />
         <ToastView />
+        <Confetti />
+        <CommandPalette />
       </div>
     </AppProvider>
   );

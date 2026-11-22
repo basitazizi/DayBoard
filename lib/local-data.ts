@@ -8,7 +8,7 @@ import { calculateHabitStreak, calculateHabitWeekPattern } from "./streaks";
 import { supabase } from "./supabase";
 
 export const DAYBOARD_AUTH_CHANGED_EVENT = "dayboard:auth-changed";
-const GUEST_DATA_KEY = "dayboard:guest-data:v2";
+export const GUEST_DATA_KEY = "dayboard:guest-data:v2";
 
 /** Columns added by the DayBoard 2.0 migration. Writes retry without them if the migration has not been run yet. */
 const OPTIONAL_COLUMNS: Record<string, string[]> = {

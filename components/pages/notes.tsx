@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, FileText, Pin, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -16,6 +17,7 @@ export function NotesPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const openId = useSearchParams().get("open");
   const [mobileEditing, setMobileEditing] = useState(false);
 
   const categories = useMemo(() => ["All", ...new Set(data.notes.map((note) => note.category))], [data.notes]);
@@ -27,6 +29,17 @@ export function NotesPage() {
   useEffect(() => {
     if (!selected && visible.length && window.matchMedia("(min-width: 1024px)").matches) setSelectedId(visible[0].id);
   }, [selected, visible]);
+
+  // Opens the note named in the link, for example from search.
+  useEffect(() => {
+    if (!openId || !data.notes.some((note) => note.id === openId)) return;
+    setQuery("");
+    setCategory("All");
+    setSelectedId(openId);
+    setMobileEditing(true);
+    // Only when the link changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, store.hydrated]);
 
   function create() {
     const id = store.addNote({ title: "Untitled note", content: "", pinned: false, category: category === "All" ? "Quick" : category });

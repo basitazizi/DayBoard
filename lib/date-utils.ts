@@ -1,3 +1,21 @@
+/** Clock and calendar preferences, set from Settings. Kept here so every formatter follows them. */
+const datePrefs = { clock24: false, weekStart: 0 as 0 | 1 };
+
+export function setDatePrefs(next: { clock24: boolean; weekStart: 0 | 1 }) {
+  datePrefs.clock24 = next.clock24;
+  datePrefs.weekStart = next.weekStart;
+}
+
+export function getWeekStart() {
+  return datePrefs.weekStart;
+}
+
+/** Weekday short names in display order, following the week-start setting. */
+export function weekdayLabels(style: "short" | "narrow" = "short") {
+  const names = style === "short" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["S", "M", "T", "W", "T", "F", "S"];
+  return [...names.slice(datePrefs.weekStart), ...names.slice(0, datePrefs.weekStart)];
+}
+
 export function localTimezone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles";
@@ -58,7 +76,7 @@ export function formatClock(date: Date, timezone = localTimezone(), showSeconds 
     hour: "numeric",
     minute: "2-digit",
     second: showSeconds ? "2-digit" : undefined,
-    hour12: true
+    hour12: !datePrefs.clock24
   }).format(date);
 }
 
@@ -69,6 +87,7 @@ export function minutesFromTime(time: string) {
 
 export function formatTime(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
+  if (datePrefs.clock24) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   const suffix = hours >= 12 ? "PM" : "AM";
   const hour = hours % 12 || 12;
   return `${hour}:${String(minutes).padStart(2, "0")} ${suffix}`;
@@ -76,6 +95,7 @@ export function formatTime(time: string) {
 
 export function formatShortTime(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
+  if (datePrefs.clock24) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   const suffix = hours >= 12 ? "PM" : "AM";
   const hour = hours % 12 || 12;
   return minutes === 0 ? `${hour} ${suffix}` : `${hour}:${String(minutes).padStart(2, "0")} ${suffix}`;
@@ -110,7 +130,7 @@ export function getMonthGrid(monthDateKey: string) {
   const anchor = new Date(`${monthDateKey}T12:00:00`);
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12);
   const start = new Date(first);
-  start.setDate(first.getDate() - first.getDay());
+  start.setDate(first.getDate() - ((first.getDay() - datePrefs.weekStart + 7) % 7));
 
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(start);
@@ -126,7 +146,7 @@ export function getMonthGrid(monthDateKey: string) {
 export function getWeekDays(dateKey: string) {
   const date = new Date(`${dateKey}T12:00:00`);
   const start = new Date(date);
-  start.setDate(date.getDate() - date.getDay());
+  start.setDate(date.getDate() - ((date.getDay() - datePrefs.weekStart + 7) % 7));
   return Array.from({ length: 7 }, (_, index) => {
     const item = new Date(start);
     item.setDate(start.getDate() + index);

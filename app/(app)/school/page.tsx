@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { SchoolPage } from "@/components/pages/school";
 
 export default function Page() {
-  return <SchoolPage />;
+  return (
+    <Suspense fallback={null}>
+      <SchoolPage />
+    </Suspense>
+  );
 }

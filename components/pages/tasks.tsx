@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { CheckSquare, Plus, Sparkles, Timer, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -31,6 +32,8 @@ export function TasksPage() {
   const today = getLocalDateKey(now, data.timezone);
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const params = useSearchParams();
+  const openKey = params.get("open");
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const work = useMemo(() => getWorkItems(data, now), [data, now]);
@@ -55,6 +58,17 @@ export function TasksPage() {
   useEffect(() => {
     if (!selectedKey && visible.length && window.matchMedia("(min-width: 1024px)").matches) setSelectedKey(visible[0].key);
   }, [selectedKey, visible]);
+
+  // Opens the item named in the link, for example from search.
+  useEffect(() => {
+    if (!openKey || !store.hydrated) return;
+    if (!getWorkItems(store.data, now).some((item) => item.key === openKey)) return;
+    setFilter("all");
+    setSelectedKey(openKey);
+    if (!window.matchMedia("(min-width: 1024px)").matches) setSheetOpen(true);
+    // Only when the link changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKey, store.hydrated]);
 
   function select(item: WorkItem) {
     setSelectedKey(item.key);
@@ -130,11 +144,11 @@ export function TasksPage() {
 }
 
 function WorkRow({ item, selected, onSelect }: { item: WorkItem; selected: boolean; onSelect: () => void }) {
-  const { store } = useApp();
+  const { store, celebrate } = useApp();
   const showBar = !item.done && (item.steps.length > 0 || item.progress > 0);
   return (
     <div className={cn("flex items-center gap-3 rounded-[14px] border px-3 py-3", selected ? "border-accent-line bg-accent-soft/50" : "border-transparent hover:bg-surface-2")}>
-      <Checkbox checked={item.done} onChange={() => toggleWork(store, item)} label={`Mark ${item.title} done`} />
+      <Checkbox checked={item.done} onChange={() => toggleWork(store, item, celebrate)} label={`Mark ${item.title} done`} />
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
         <span className={cn("block truncate font-semibold", item.done && "text-ink-3 line-through")}>{item.title}</span>
         {showBar ? (
@@ -156,7 +170,7 @@ function WorkRow({ item, selected, onSelect }: { item: WorkItem; selected: boole
 }
 
 export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () => void }) {
-  const { store, showToast, now } = useApp();
+  const { store, showToast, now, celebrate } = useApp();
   const data = store.data;
   const today = getLocalDateKey(now, data.timezone);
   const [newStep, setNewStep] = useState("");
@@ -331,7 +345,7 @@ export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () 
             Start focus on this
           </Button>
         ) : (
-          <Button variant="primary" full onClick={() => toggleWork(store, item)}>
+          <Button variant="primary" full onClick={() => toggleWork(store, item, celebrate)}>
             {item.done ? "Reopen" : "Mark as submitted"}
           </Button>
         )}

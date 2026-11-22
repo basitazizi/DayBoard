@@ -1,10 +1,11 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, useEffect } from "react";
 import { getAgenda, type AgendaItem } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
-import { addDays, formatMonthYear, getLocalDateKey, getMonthGrid, getRelativeDayLabel, getWeekDays } from "@/lib/date-utils";
+import { addDays, formatMonthYear, formatShortTime, getLocalDateKey, getMonthGrid, getRelativeDayLabel, getWeekDays, timeFromMinutes, weekdayLabels, weekdayOf } from "@/lib/date-utils";
 import { suggestFreeTime } from "@/lib/planner";
 import type { CalendarEvent, CalendarView, EventCategory } from "@/types/dayboard";
 import { useApp } from "../app-context";
@@ -39,6 +40,10 @@ export function CalendarPage() {
   const today = getLocalDateKey(now, data.timezone);
   const [view, setView] = useState<CalendarView>("month");
   const [selected, setSelected] = useState(today);
+  const linkedDate = useSearchParams().get("date");
+  useEffect(() => {
+    if (linkedDate && /^\d{4}-\d{2}-\d{2}$/.test(linkedDate)) setSelected(linkedDate);
+  }, [linkedDate]);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
 
   const selectedAgenda = useMemo(() => getAgenda(data, selected), [data, selected]);
@@ -131,7 +136,7 @@ function MonthGrid({ selected, today, onSelect }: { selected: string; today: str
   return (
     <div className="flex min-h-0 flex-1 flex-col border-t border-line">
       <div className="grid grid-cols-7">
-        {WEEKDAYS.map((day) => (
+        {weekdayLabels().map((day) => (
           <div key={day} className="px-2 pt-2.5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3 sm:px-3">
             {day}
           </div>
@@ -183,13 +188,13 @@ function WeekGrid({ selected, today, onSelect, onOpen }: { selected: string; tod
         return (
           <div key={day} className={cn("flex min-w-0 flex-col gap-1.5 p-2.5", index > 0 && "border-l border-line", day === selected && "bg-accent-soft/40")}>
             <button type="button" onClick={() => onSelect(day)} className="flex items-center gap-2 text-left">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{WEEKDAYS[index]}</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{WEEKDAYS[weekdayOf(day)]}</span>
               <span className={cn("grid h-7 w-7 place-items-center rounded-full text-[13px] font-semibold", day === today && "bg-accent text-on-accent")}>{Number(day.slice(8))}</span>
             </button>
             {items.map((item) => (
               <button key={item.key} type="button" onClick={() => onOpen(item)} className={cn("rounded-lg px-2 py-1.5 text-left", TONE[item.tone].soft, TONE[item.tone].text, item.done && "opacity-60")}>
                 <span className="block truncate text-xs font-bold">{item.title}</span>
-                <span className="block truncate text-[11px] font-medium opacity-80">{item.allDay ? "All day" : item.start !== undefined ? formatStart(item.start) : "Due"}</span>
+                <span className="block truncate text-[11px] font-medium opacity-80">{item.allDay ? "All day" : item.start !== undefined ? formatShortTime(timeFromMinutes(item.start)) : "Due"}</span>
               </button>
             ))}
             {items.length === 0 ? <span className="px-1 text-xs text-ink-3">Free</span> : null}
@@ -200,11 +205,6 @@ function WeekGrid({ selected, today, onSelect, onOpen }: { selected: string; tod
   );
 }
 
-function formatStart(minutes: number) {
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, "0")}` : ""} ${hour >= 12 ? "PM" : "AM"}`;
-}
 
 function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
   const { store, showToast } = useApp();

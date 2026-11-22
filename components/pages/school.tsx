@@ -1,7 +1,8 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { Camera, GraduationCap, Plus, School, Sparkles, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { getAgenda, timeRangeLabel } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import { addDays, formatShortTime, getDayDistance, getLocalDateKey, getRelativeDayLabel } from "@/lib/date-utils";
@@ -22,6 +23,10 @@ export function SchoolPage() {
   const data = store.data;
   const today = getLocalDateKey(now, data.timezone);
   const [tab, setTab] = useState<Tab>("overview");
+  const linkedTab = useSearchParams().get("tab");
+  useEffect(() => {
+    if (linkedTab === "overview" || linkedTab === "assignments" || linkedTab === "exams") setTab(linkedTab);
+  }, [linkedTab]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 

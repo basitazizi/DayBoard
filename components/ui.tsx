@@ -99,7 +99,7 @@ export function IconButton({ label, className, children, tone = "plain", ...prop
 
 export function Card({ className, children, ai, ...props }: React.HTMLAttributes<HTMLDivElement> & { ai?: boolean }) {
   return (
-    <section className={cn("min-w-0 rounded-card border border-line bg-surface p-4 shadow-card sm:p-5", ai && "ai-surface", className)} {...props}>
+    <section className={cn("db-card min-w-0 rounded-card border border-line bg-surface p-4 shadow-card sm:p-5", ai && "ai-surface", className)} {...props}>
       {children}
     </section>
   );
@@ -185,7 +185,7 @@ export function Checkbox({ checked, onChange, label, tone = "accent", disabled }
       }}
       className={cn(
         "grid h-6 w-6 shrink-0 place-items-center rounded-lg border-2 transition-colors",
-        checked ? cn(TONE[tone].solid, TONE[tone].border, "text-white") : "border-ink-3/50 hover:border-accent"
+        checked ? cn(TONE[tone].solid, TONE[tone].border, tone === "accent" ? "text-on-accent" : "text-white") : "border-ink-3/50 hover:border-accent"
       )}
     >
       {checked ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
@@ -246,7 +246,7 @@ export function EmptyState({ icon, title, body, action, className }: { icon?: Re
 
 export function Row({ first, className, children, ...props }: React.HTMLAttributes<HTMLDivElement> & { first?: boolean }) {
   return (
-    <div className={cn("flex items-center gap-3 py-3", !first && "border-t border-line", className)} {...props}>
+    <div className={cn("db-row flex items-center gap-3 py-3", !first && "border-t border-line", className)} {...props}>
       {children}
     </div>
   );

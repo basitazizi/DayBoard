@@ -16,13 +16,14 @@
   --line: #e7e5de;
   --track: #eceae3;
 
-  --accent: #5b4bf5;
-  --accent-strong: #4b3be8;
-  --accent-soft: #eceaff;
-  --accent-line: #ddd8ff;
+  /* The default accent is black and white. */
+  --accent: #14161c;
+  --accent-strong: #000000;
+  --accent-soft: #ebeae4;
+  --accent-line: #d6d4cc;
   --on-accent: #ffffff;
-  --hero-from: #4b3be8;
-  --hero-to: #a268f5;
+  --hero-from: #14161c;
+  --hero-to: #4a4d57;
 
   --teal: #0b8f80;
   --teal-soft: #ddf5f1;
@@ -50,13 +51,13 @@
   --line: #2a2e38;
   --track: #272b35;
 
-  --accent: #8f7cff;
-  --accent-strong: #7b66ff;
-  --accent-soft: #26224a;
-  --accent-line: #3a3470;
-  --on-accent: #ffffff;
-  --hero-from: #4b3be8;
-  --hero-to: #8a5cf6;
+  --accent: #f2f3f5;
+  --accent-strong: #ffffff;
+  --accent-soft: #272b35;
+  --accent-line: #3a3f4b;
+  --on-accent: #0f1116;
+  --hero-from: #2a2e38;
+  --hero-to: #4a4f5c;
 
   --teal: #3fc7b6;
   --teal-soft: #123330;
@@ -73,7 +74,9 @@
   --shadow-pop: 0 24px 60px -20px rgb(0 0 0 / 0.7);
 }
 
-/* Accent choices (Settings > Appearance). The default is violet. */
+/* Accent choices (Settings > Appearance). The default is black and white. */
+:root[data-accent="violet"] { --accent: #5b4bf5; --accent-strong: #4b3be8; --accent-soft: #eceaff; --accent-line: #ddd8ff; --on-accent: #ffffff; --hero-from: #4b3be8; --hero-to: #a268f5; }
+:root[data-theme="night"][data-accent="violet"] { --accent: #8f7cff; --accent-strong: #7b66ff; --accent-soft: #26224a; --accent-line: #3a3470; --on-accent: #ffffff; --hero-from: #4b3be8; --hero-to: #8a5cf6; }
 :root[data-accent="teal"] { --accent: #0b8f80; --accent-strong: #087567; --accent-soft: #ddf5f1; --accent-line: #b9e8e1; --hero-from: #087567; --hero-to: #2bb6a3; }
 :root[data-accent="blue"] { --accent: #2470d8; --accent-strong: #1b5cb8; --accent-soft: #e0edfd; --accent-line: #bcd6fa; --hero-from: #1b5cb8; --hero-to: #4f9bf5; }
 :root[data-accent="rose"] { --accent: #d13a60; --accent-strong: #b52c50; --accent-soft: #fce3ea; --accent-line: #f6c2cf; --hero-from: #b52c50; --hero-to: #f0708f; }
@@ -82,6 +85,20 @@
 :root[data-theme="night"][data-accent="blue"] { --accent: #6aa5f5; --accent-strong: #5494ea; --accent-soft: #152a45; --accent-line: #214068; --on-accent: #07182c; }
 :root[data-theme="night"][data-accent="rose"] { --accent: #ff7a9a; --accent-strong: #f56687; --accent-soft: #40161f; --accent-line: #5e2330; --on-accent: #2b0810; }
 :root[data-theme="night"][data-accent="amber"] { --accent: #f0b146; --accent-strong: #e2a133; --accent-soft: #3a2c10; --accent-line: #57431a; --on-accent: #241803; }
+
+/* More accent colours. */
+:root[data-accent="green"] { --accent: #25874a; --accent-strong: #1d6e3c; --accent-soft: #e0f4e7; --accent-line: #bfe6cc; --hero-from: #1d6e3c; --hero-to: #4cb875; }
+:root[data-accent="orange"] { --accent: #e2620f; --accent-strong: #c2520a; --accent-soft: #fdeadb; --accent-line: #f8cba8; --hero-from: #c2520a; --hero-to: #f59a4c; }
+:root[data-accent="pink"] { --accent: #d03c9b; --accent-strong: #b02f82; --accent-soft: #fbe3f2; --accent-line: #f3c0e1; --hero-from: #b02f82; --hero-to: #ec7fc4; }
+:root[data-theme="night"][data-accent="green"] { --accent: #5dd48a; --accent-strong: #4bc278; --accent-soft: #13321f; --accent-line: #1f4d31; --on-accent: #062012; }
+:root[data-theme="night"][data-accent="orange"] { --accent: #ff9a52; --accent-strong: #f5873a; --accent-soft: #3d2312; --accent-line: #5c351b; --on-accent: #2a1405; }
+:root[data-theme="night"][data-accent="pink"] { --accent: #f584cd; --accent-strong: #ec6dbf; --accent-soft: #3d1530; --accent-line: #5c2148; --on-accent: #2b0820; }
+
+/* Typefaces. The font files are loaded by next/font in app/layout.tsx. */
+:root { --app-font: var(--font-inter), "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif; }
+:root[data-font="friendly"] { --app-font: var(--font-nunito), ui-rounded, "Segoe UI", system-ui, sans-serif; }
+:root[data-font="classic"] { --app-font: var(--font-lora), Georgia, "Times New Roman", serif; }
+:root[data-font="mono"] { --app-font: var(--font-jbmono), ui-monospace, "Cascadia Mono", Consolas, monospace; }
 
 :root[data-text="small"] { font-size: 15px; }
 :root[data-text="large"] { font-size: 17.5px; }
@@ -111,7 +128,7 @@
   --color-rose-soft: var(--rose-soft);
   --color-green: var(--green);
   --color-green-soft: var(--green-soft);
-  --font-sans: var(--font-inter), "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--app-font);
   --shadow-card: var(--shadow-card);
   --shadow-pop: var(--shadow-pop);
   --radius-card: var(--radius-card);
@@ -137,7 +154,7 @@
 
   body {
     margin: 0;
-    font-family: var(--font-sans);
+    font-family: var(--app-font);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -229,4 +246,76 @@
   .voice-bar {
     animation: none;
   }
+}
+
+/* ------------------------------------------------------------------
+   Personalisation that cannot be expressed as tokens.
+   These rules sit outside the cascade layers on purpose so they win
+   over utility classes.
+   ------------------------------------------------------------------ */
+
+/* Compact layout: tighter cards, rows and gaps. */
+:root[data-density="compact"] .db-card { padding: 0.8rem 0.95rem; }
+:root[data-density="compact"] .db-row { padding-block: 0.5rem; }
+:root[data-density="compact"] main .gap-5 { gap: 0.75rem; }
+:root[data-density="compact"] main .mb-5 { margin-bottom: 0.75rem; }
+
+/* Page backgrounds. */
+:root[data-backdrop="dots"] body {
+  background: radial-gradient(color-mix(in srgb, var(--ink) 13%, transparent) 1.1px, transparent 1.6px) 0 0 / 22px 22px, var(--bg);
+  background-attachment: fixed;
+}
+:root[data-backdrop="grid"] body {
+  background:
+    linear-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--bg);
+  background-attachment: fixed;
+}
+:root[data-backdrop="aurora"] body {
+  background:
+    radial-gradient(60% 50% at 8% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+    radial-gradient(50% 45% at 95% 8%, color-mix(in srgb, var(--teal) 18%, transparent), transparent 70%),
+    radial-gradient(55% 50% at 60% 100%, color-mix(in srgb, var(--rose) 12%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+:root[data-backdrop="sunset"] body {
+  background:
+    radial-gradient(70% 55% at 0% 0%, color-mix(in srgb, #ff9a52 26%, transparent), transparent 70%),
+    radial-gradient(60% 55% at 100% 100%, color-mix(in srgb, #e0476b 20%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+:root[data-backdrop="ocean"] body {
+  background:
+    radial-gradient(70% 55% at 100% 0%, color-mix(in srgb, #2470d8 22%, transparent), transparent 70%),
+    radial-gradient(60% 55% at 0% 100%, color-mix(in srgb, #2bc0c9 20%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+/* A photo of the person's choice, softened so text stays readable. */
+:root[data-backdrop="wallpaper"] body {
+  background:
+    linear-gradient(color-mix(in srgb, var(--bg) 72%, transparent), color-mix(in srgb, var(--bg) 82%, transparent)),
+    var(--wallpaper, none) center / cover no-repeat,
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* Celebration when something is finished. */
+@keyframes db-confetti {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx), 105vh, 0) rotate(var(--spin)); opacity: 0.9; }
+}
+.confetti-piece {
+  position: absolute;
+  top: -12px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: db-confetti var(--fall) cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece { display: none; }
 }

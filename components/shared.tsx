@@ -23,7 +23,9 @@ export function kindIcon(kind: AgendaKind | "note", className = "h-5 w-5"): Reac
 }
 
 /** Marks a task or assignment done, or reopens it. */
-export function toggleWork(store: DayBoardStore, item: Pick<WorkItem, "kind" | "id" | "done">) {
+/** Pass `onFinished` to celebrate when the item becomes done. */
+export function toggleWork(store: DayBoardStore, item: Pick<WorkItem, "kind" | "id" | "done">, onFinished?: () => void) {
+  if (!item.done) onFinished?.();
   if (item.kind === "task") store.updateTaskStatus(item.id, item.done ? "not_started" : "completed");
   else store.updateAssignment(item.id, { status: item.done ? "not_started" : "submitted" });
 }
@@ -46,7 +48,7 @@ export function BoldText({ text }: { text: string }) {
 }
 
 export function AgendaRow({ item, first, onOpen, compact }: { item: AgendaItem; first?: boolean; onOpen?: () => void; compact?: boolean }) {
-  const { store } = useApp();
+  const { store, celebrate } = useApp();
   const checkable = item.kind === "task" || item.kind === "assignment";
   const timeText = item.allDay ? "All day" : item.start !== undefined ? formatShortTime(timeFromMinutes(item.start)) : item.due !== undefined ? formatShortTime(timeFromMinutes(item.due)) : "Any time";
 
@@ -70,7 +72,7 @@ export function AgendaRow({ item, first, onOpen, compact }: { item: AgendaItem; 
           {KIND_LABEL[item.kind]}
         </Chip>
       )}
-      {checkable ? <Checkbox checked={item.done} onChange={() => toggleWork(store, { kind: item.kind as "task" | "assignment", id: item.sourceId, done: item.done })} label={`Mark ${item.title} done`} /> : <span className="w-6 shrink-0" aria-hidden />}
+      {checkable ? <Checkbox checked={item.done} onChange={() => toggleWork(store, { kind: item.kind as "task" | "assignment", id: item.sourceId, done: item.done }, celebrate)} label={`Mark ${item.title} done`} /> : <span className="w-6 shrink-0" aria-hidden />}
     </div>
   );
 }

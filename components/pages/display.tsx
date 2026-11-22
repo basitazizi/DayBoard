@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCountdown, getAgenda, getUpNext, timeRangeLabel } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
-import { addDays, formatDisplayDate, formatDuration, formatShortTime, getDayDistance, getLocalDateKey, timeFromMinutes } from "@/lib/date-utils";
+import { addDays, formatClock, formatDisplayDate, formatDuration, formatShortTime, getDayDistance, getLocalDateKey, timeFromMinutes } from "@/lib/date-utils";
 import { focusSeries } from "@/lib/findings";
 import { useFocusHistory } from "@/lib/focus-history";
 import { getWorkItems } from "@/lib/work";
@@ -49,7 +49,7 @@ function DisplayView() {
   const exam = data.exams.filter((entry) => entry.examDate >= today && entry.score === undefined).sort((a, b) => a.examDate.localeCompare(b.examDate))[0];
   const habitsDone = data.habits.filter((habit) => habit.completedToday).length;
   const focusToday = focusSeries(sessions, data.timezone, 1, now)[0]?.minutes ?? 0;
-  const clock = new Intl.DateTimeFormat("en-US", { timeZone: data.timezone, hour: "numeric", minute: "2-digit", hour12: true }).format(now);
+  const clock = formatClock(now, data.timezone);
   const [time, meridiem] = clock.split(/\s+/);
 
   return (

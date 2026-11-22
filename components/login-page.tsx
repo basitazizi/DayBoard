@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, Camera, Check, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarDays, Camera, Eye, EyeOff, Sparkles } from "lucide-react";
+import { LogoMark } from "./logo-mark";
 import { useSupabaseAuth } from "@/lib/auth";
 import { localTimezone } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase";
@@ -64,9 +65,7 @@ export function LoginPage() {
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[0.95fr_1.05fr]">
         <section className="hero-gradient m-4 hidden flex-col rounded-[28px] p-10 text-white lg:flex">
           <div className="flex items-center gap-3 text-2xl font-bold tracking-[-0.02em]">
-            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-white text-[var(--hero-from)]">
-              <Check className="h-6 w-6" strokeWidth={3} />
-            </span>
+            <LogoMark size={44} invert />
             DayBoard
           </div>
           <div className="mt-auto">
