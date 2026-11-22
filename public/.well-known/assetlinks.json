@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.day_board1.twa",
+      "sha256_cert_fingerprints": ["7A:69:74:FB:78:1F:91:CC:96:F9:70:17:16:0B:7A:5A:80:E1:54:92:2D:6F:77:57:2E:C3:0D:27:59:D8:C7:6D"]
+    }
+  }
+]
