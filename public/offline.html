@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0d0f" />
+    <title>Offline · DayBoard</title>
+    <style>
+      :root { --bg: #f4f3ee; --ink: #14161c; --ink-2: #565b69; --surface: #ffffff; --line: #e7e5de; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0f1116; --ink: #f2f3f5; --ink-2: #a9aebb; --surface: #181b22; --line: #2a2e38; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+      .card { max-width: 360px; text-align: center; }
+      img { width: 72px; height: 72px; border-radius: 18px; }
+      h1 { margin: 20px 0 8px; font-size: 24px; letter-spacing: -0.02em; }
+      p { margin: 0 0 24px; color: var(--ink-2); line-height: 1.5; }
+      button { height: 46px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--ink); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>You're offline</h1>
+      <p>DayBoard needs a connection to load your plans. Check your Wi-Fi or mobile data and try again.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+    <script>
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

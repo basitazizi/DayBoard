@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, Bell, Camera, Check, Cloud, Download, Upload, HardDrive, ImagePlus, Lock, LogOut, Monitor, PartyPopper, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useAssistantStatus } from "@/lib/assistant-client";
+import { supabase } from "@/lib/supabase";
 import { countBackupItems, downloadBackup, readBackup, stageBackup } from "@/lib/backup";
 import { notificationsSupported } from "@/lib/use-reminders";
 import { cn } from "@/lib/cn";
@@ -348,9 +349,78 @@ function ProfileTab() {
               </div>
             )}
           </div>
+          <p className="mt-4 text-[13px] text-ink-3">
+            Read how your information is handled in the{" "}
+            <a href="/privacy" className="font-semibold text-ink-2 underline">
+              privacy policy
+            </a>
+            .
+          </p>
         </Card>
+
+        {auth.user ? <DeleteAccountCard /> : null}
       </div>
     </div>
+  );
+}
+
+/** Permanently deletes the signed-in account and everything in it. Google Play requires this for apps with sign-up. */
+function DeleteAccountCard() {
+  const { auth } = useApp();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function remove() {
+    setBusy(true);
+    setError("");
+    const { error: rpcError } = await supabase.rpc("delete_my_account");
+    if (rpcError) {
+      setBusy(false);
+      setError(/function|schema cache|not find/i.test(rpcError.message) ? "Account deletion isn't set up on the server yet. The site owner needs to run the delete-account database setup." : "Your account could not be deleted. Please try again.");
+      return;
+    }
+    try {
+      for (const key of ["dayboard:guest-data:v2", "dayboard:prefs", "dayboard:profile", "dayboard:wallpaper", "dayboard:focus-history", "dayboard-focus-session", "dayboard:reminders-sent"]) localStorage.removeItem(key);
+    } catch {
+      // Nothing stored.
+    }
+    await auth.signOut();
+    window.location.assign("/?deleted=1");
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Delete account" />
+      <p className="-mt-1.5 text-[13px] text-ink-2">Permanently deletes your account and everything in it: tasks, calendar, classes, grades, habits, notes, focus history and profile. This can't be undone. You may want to download a backup first (Settings → General).</p>
+      {open ? (
+        <div className="mt-3 grid gap-3">
+          <Field label='Type DELETE to confirm'>
+            <TextInput value={typed} onChange={(event) => setTyped(event.target.value)} autoComplete="off" placeholder="DELETE" />
+          </Field>
+          <div className="flex flex-wrap gap-2.5">
+            <Button variant="danger" disabled={typed.trim() !== "DELETE" || busy} onClick={() => void remove()} icon={<Trash2 className="h-4 w-4" />}>
+              {busy ? "Deleting…" : "Delete my account forever"}
+            </Button>
+            <Button
+              onClick={() => {
+                setOpen(false);
+                setTyped("");
+                setError("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+          {error ? <Notice tone="rose">{error}</Notice> : null}
+        </div>
+      ) : (
+        <Button variant="danger" className="mt-3" onClick={() => setOpen(true)} icon={<Trash2 className="h-4 w-4" />}>
+          Delete account
+        </Button>
+      )}
+    </Card>
   );
 }
 

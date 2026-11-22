@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Lora, Nunito } from "next/font/google";
 import "./globals.css";
+import { ServiceWorker } from "@/components/service-worker";
 import { ThemeProvider } from "@/lib/theme";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
+        <ServiceWorker />
       </body>
     </html>
   );
