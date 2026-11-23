@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Lora, Nunito } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/service-worker";
 import { ThemeProvider } from "@/lib/theme";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito", display: "swap", preload: false });
@@ -10,6 +11,7 @@ const lora = Lora({ subsets: ["latin"], variable: "--font-lora", display: "swap"
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono", display: "swap", preload: false });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: "DayBoard", template: "%s · DayBoard" },
   description: "A planner for students: calendar, tasks, classes, habits and focus in one place, with an assistant that adds things for you."
 };

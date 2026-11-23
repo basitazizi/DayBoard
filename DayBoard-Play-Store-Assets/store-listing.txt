@@ -1,0 +1,72 @@
+DAYBOARD — GOOGLE PLAY STORE LISTING
+Copy each part into Play Console → Grow users → Store presence → Main store listing.
+
+------------------------------------------------------------
+APP NAME (max 30 characters)
+------------------------------------------------------------
+DayBoard: Student Planner
+
+------------------------------------------------------------
+SHORT DESCRIPTION (max 80 characters)
+------------------------------------------------------------
+Classes, tasks, exams and habits in one planner. Add anything in one line.
+
+------------------------------------------------------------
+FULL DESCRIPTION (max 4000 characters)
+------------------------------------------------------------
+DayBoard is the planner that tells you what to do next.
+
+Classes, assignments, exams, tasks, habits and notes live in one place, and DayBoard puts them in order for you. Open it and you'll see what's up next, what's due, and where your free time is.
+
+ADD ANYTHING IN ONE LINE
+Type "Chem quiz Thursday at 2pm and history essay due Friday" and DayBoard creates both, on the right dates, linked to the right classes. You can also say it out loud, or take a photo of a syllabus or whiteboard. You always see what will be added before anything is saved.
+
+YOUR DAY, IN ORDER
+• Up next: your next class or event, with a countdown
+• Today's plan: classes, study sessions, tasks and deadlines on one timeline
+• A short daily brief of what matters right now
+
+STUDY PLANS THAT MAKE THEMSELVES
+Add an exam and DayBoard sets aside study sessions in your free time before it. Big tasks are broken into steps, so the first one always feels easy.
+
+SCHOOL, SORTED
+• Every class with its own colour, days and room
+• Assignments and exams in one list, ranked by what's most urgent
+• Enter your scores and see each class average
+
+FOCUS AND HABITS
+• A distraction-free focus timer with breaks and background sounds
+• Habit check-ins, streaks and a five-week history
+• Insights that show when you work best and what's slipping
+
+AN ASSISTANT THAT KNOWS YOUR WEEK
+Ask "What should I work on next?" or "When am I free today?" and get an answer from your own schedule.
+
+MAKE IT YOURS
+Light or dark mode, accent colours, fonts, backgrounds, a custom avatar and profile, and a dashboard you can rearrange card by card.
+
+ALSO
+• Reminders before things start
+• Search everything in seconds
+• Works without an account; sign in to sync your phone, laptop and wall display
+• Download a backup of all your data at any time
+• Delete your account from Settings whenever you want
+
+DayBoard is free, has no ads, and never sells your information.
+
+------------------------------------------------------------
+OTHER LISTING FIELDS
+------------------------------------------------------------
+App category: Productivity   (Education also fits)
+Tags: Planner, To-do list, Calendar, Study
+Contact email: aziziabdulbasit35@gmail.com
+Website: https://dayboard.dev
+Privacy policy: https://dayboard.dev/privacy
+Account deletion link (asked in Data safety): https://dayboard.dev/delete-account
+
+------------------------------------------------------------
+GRAPHICS IN THIS FOLDER
+------------------------------------------------------------
+App icon (512 x 512):          app-icon-512.png
+Feature graphic (1024 x 500):  feature-graphic.png
+Phone screenshots (1080x1920): screenshots/1-dashboard.png ... 8-dark.png

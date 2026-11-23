@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoMark } from "@/components/logo-mark";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy policy",
   description: "How DayBoard handles your information."
 };
 
-/**
- * TODO before publishing: replace this with the email address people should write to about privacy.
- * Google Play shows this policy on your store listing.
- */
-const CONTACT_EMAIL = "aziziabdulbasit35@gmail.com";
 const UPDATED = "November 21, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -82,7 +78,10 @@ export default function PrivacyPage() {
             <li>Change or remove anything you have added, at any time.</li>
             <li>Download a copy of all your data from Settings → General → Backup.</li>
             <li>
-              Delete your account and everything in it from Settings → Profile → Delete account, on the website or in the app. Deletion is permanent and happens straight away.
+              Delete your account and everything in it from Settings → Profile → Delete account, on the website or in the app. Deletion is permanent and happens straight away.{" "}
+              <Link href="/delete-account" className="font-semibold text-ink underline">
+                More about deleting your account
+              </Link>
             </li>
           </ul>
         </Section>

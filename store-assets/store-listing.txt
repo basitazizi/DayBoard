@@ -59,10 +59,10 @@ OTHER LISTING FIELDS
 ------------------------------------------------------------
 App category: Productivity   (Education also fits)
 Tags: Planner, To-do list, Calendar, Study
-Contact email: (your email)
-Website: https://day-board1.vercel.app
-Privacy policy: https://day-board1.vercel.app/privacy
-Account deletion link (asked in Data safety): https://day-board1.vercel.app/settings
+Contact email: aziziabdulbasit35@gmail.com
+Website: https://dayboard.dev
+Privacy policy: https://dayboard.dev/privacy
+Account deletion link (asked in Data safety): https://dayboard.dev/delete-account
 
 ------------------------------------------------------------
 GRAPHICS IN THIS FOLDER
