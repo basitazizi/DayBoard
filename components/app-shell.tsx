@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, Camera, CheckSquare, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Search, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, CheckSquare, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Search, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
@@ -12,6 +12,7 @@ import { CommandPalette, openSearch } from "./command-palette";
 import { Avatar } from "./avatar";
 import { LogoMark } from "./logo-mark";
 import { useTheme } from "@/lib/theme";
+import { useSpeech } from "@/lib/use-speech";
 import { QuickAdd } from "./quick-add";
 import { Button, IconButton, Sheet } from "./ui";
 
@@ -256,18 +257,19 @@ function GuestImportBanner() {
 /** The "Add anything" box that sits at the top of every page on larger screens. */
 function AddBox() {
   const { openQuickAdd } = useApp();
+  const { prefs } = useTheme();
+  const { supported: canSpeak } = useSpeech();
   return (
     <div className="hidden h-[46px] w-[min(430px,38vw)] items-center gap-1.5 rounded-[14px] border border-line bg-surface pl-3.5 pr-1.5 shadow-[0_1px_2px_rgb(20_22_28/0.04)] lg:flex">
       <button type="button" onClick={() => openQuickAdd({ mode: "type" })} className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-left text-ink-3">
         <Plus className="h-[18px] w-[18px] shrink-0" />
         <span className="truncate">Add anything… “Chem exam Friday 9am”</span>
       </button>
-      <IconButton label="Add by voice" tone="soft" className="h-8 w-8" onClick={() => openQuickAdd({ mode: "speak" })}>
-        <Mic className="h-[17px] w-[17px]" />
-      </IconButton>
-      <IconButton label="Add from a photo" tone="soft" className="h-8 w-8" onClick={() => openQuickAdd({ mode: "photo" })}>
-        <Camera className="h-[17px] w-[17px]" />
-      </IconButton>
+      {canSpeak && prefs.voiceInput ? (
+        <IconButton label="Add by voice" tone="soft" className="h-8 w-8" onClick={() => openQuickAdd({ mode: "speak" })}>
+          <Mic className="h-[17px] w-[17px]" />
+        </IconButton>
+      ) : null}
     </div>
   );
 }

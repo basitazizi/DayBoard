@@ -23,8 +23,19 @@ type RecognitionConstructor = new () => Recognition;
 
 function getRecognition(): RecognitionConstructor | null {
   if (typeof window === "undefined") return null;
-  const scope = window as unknown as { SpeechRecognition?: RecognitionConstructor; webkitSpeechRecognition?: RecognitionConstructor };
+  const scope = window as unknown as {
+    SpeechRecognition?: RecognitionConstructor;
+    webkitSpeechRecognition?: RecognitionConstructor;
+    Capacitor?: { isNativePlatform?: () => boolean };
+  };
+  // The Android app's web view has no working speech recogniser, so voice input is hidden there for now.
+  if (scope.Capacitor?.isNativePlatform?.()) return null;
   return scope.SpeechRecognition ?? scope.webkitSpeechRecognition ?? null;
+}
+
+/** Whether voice input can work here (false in the Android app and in browsers without speech recognition). */
+export function speechAvailable() {
+  return Boolean(getRecognition());
 }
 
 const ERROR_TEXT: Record<string, string> = {

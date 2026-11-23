@@ -110,7 +110,7 @@ export function DashboardPage() {
             <>
               <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/75">{isEmpty ? "Welcome to DayBoard" : "Nothing scheduled next"}</div>
               <h2 className="mt-2 text-2xl font-bold leading-tight tracking-[-0.02em] sm:text-[30px]">{isEmpty ? "Tell me what's on your plate" : "Your schedule is clear"}</h2>
-              <p className="mt-1.5 text-white/85">{isEmpty ? "Type, say or photograph anything. For example: “Chem exam Friday 9am”." : "A good time to get ahead, or to rest."}</p>
+              <p className="mt-1.5 text-white/85">{isEmpty ? "Type anything in your own words. For example: “Chem exam Friday 9am”." : "A good time to get ahead, or to rest."}</p>
               <div className="mt-4 flex flex-wrap gap-2.5">
                 <Button variant="hero" onClick={() => openQuickAdd()} icon={<Plus className="h-[17px] w-[17px]" />}>
                   Add something

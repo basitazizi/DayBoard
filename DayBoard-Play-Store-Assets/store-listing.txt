@@ -19,7 +19,7 @@ DayBoard is the planner that tells you what to do next.
 Classes, assignments, exams, tasks, habits and notes live in one place, and DayBoard puts them in order for you. Open it and you'll see what's up next, what's due, and where your free time is.
 
 ADD ANYTHING IN ONE LINE
-Type "Chem quiz Thursday at 2pm and history essay due Friday" and DayBoard creates both, on the right dates, linked to the right classes. You can also say it out loud, or take a photo of a syllabus or whiteboard. You always see what will be added before anything is saved.
+Type "Chem quiz Thursday at 2pm and history essay due Friday" and DayBoard creates both, on the right dates, linked to the right classes. You always see what will be added before anything is saved.
 
 YOUR DAY, IN ORDER
 • Up next: your next class or event, with a countdown
@@ -69,4 +69,4 @@ GRAPHICS IN THIS FOLDER
 ------------------------------------------------------------
 App icon (512 x 512):          app-icon-512.png
 Feature graphic (1024 x 500):  feature-graphic.png
-Phone screenshots (1080x1920): screenshots/1-dashboard.png ... 8-dark.png
+Phone screenshots (1080x1920): screenshots/1-dashboard.png, 3-tasks.png, 4-calendar.png, 7-insights.png, 8-dark.png (5 screenshots). 2, 5 and 6 are in screenshots-retired/ because they show voice and photo adding, which are not in this version.

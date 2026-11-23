@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, Camera, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarDays, Eye, EyeOff, Plus, Sparkles } from "lucide-react";
 import { LogoMark } from "./logo-mark";
 import { useSupabaseAuth } from "@/lib/auth";
 import { localTimezone } from "@/lib/date-utils";
@@ -75,7 +75,7 @@ export function LoginPage() {
                 <CalendarDays className="h-5 w-5 shrink-0" /> Classes, tasks, exams and habits in one place
               </li>
               <li className="flex items-center gap-3">
-                <Camera className="h-5 w-5 shrink-0" /> Type it, say it or snap a photo to add it
+                <Plus className="h-5 w-5 shrink-0" /> Type it in your own words and DayBoard files it
               </li>
               <li className="flex items-center gap-3">
                 <Sparkles className="h-5 w-5 shrink-0" /> An assistant that plans your study time

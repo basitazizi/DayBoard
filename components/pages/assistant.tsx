@@ -203,9 +203,12 @@ export function AssistantPage() {
                 }
               }}
             />
-            <IconButton label="Add from a photo" tone="soft" disabled={busy} onClick={() => fileRef.current?.click()}>
-              <Camera className="h-[18px] w-[18px]" />
-            </IconButton>
+            {/* Reading photos needs the full assistant; without it the button would only lead to an error. */}
+            {fullAssistant ? (
+              <IconButton label="Add from a photo" tone="soft" disabled={busy} onClick={() => fileRef.current?.click()}>
+                <Camera className="h-[18px] w-[18px]" />
+              </IconButton>
+            ) : null}
             {speech.supported && prefs.voiceInput ? (
               <IconButton label={speech.listening ? "Stop listening" : "Speak"} tone="soft" className={cn(speech.listening && "bg-rose text-white hover:bg-rose hover:text-white")} onClick={() => (speech.listening ? speech.stop() : speech.start())}>
                 {speech.listening ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-[18px] w-[18px]" />}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Camera, GraduationCap, Plus, School, Sparkles, Trash2 } from "lucide-react";
+import { GraduationCap, Plus, School, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { getAgenda, timeRangeLabel } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
@@ -54,9 +54,6 @@ export function SchoolPage() {
             ]}
           />
           <div className="ml-auto flex flex-wrap items-center gap-2.5">
-            <Button onClick={() => openQuickAdd({ mode: "photo" })} icon={<Camera className="h-4 w-4" />}>
-              Scan a syllabus
-            </Button>
             <Button variant="primary" onClick={() => openQuickAdd({ mode: "form", kind: tab === "exams" ? "exam" : tab === "assignments" ? "assignment" : "class" })} icon={<Plus className="h-4 w-4" />}>
               {tab === "exams" ? "Exam" : tab === "assignments" ? "Assignment" : "Class"}
             </Button>
@@ -74,9 +71,6 @@ export function SchoolPage() {
               <div className="flex flex-wrap justify-center gap-2.5">
                 <Button variant="primary" onClick={() => openQuickAdd({ mode: "form", kind: "class" })} icon={<Plus className="h-4 w-4" />}>
                   Add a class
-                </Button>
-                <Button onClick={() => openQuickAdd({ mode: "photo" })} icon={<Camera className="h-4 w-4" />}>
-                  Scan a syllabus
                 </Button>
               </div>
             }

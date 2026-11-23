@@ -7,7 +7,7 @@ import { useDayBoardData, type DayBoardStore } from "@/lib/local-data";
 import { useTheme } from "@/lib/theme";
 import { useReminders } from "@/lib/use-reminders";
 
-export type QuickAddMode = "type" | "speak" | "photo" | "form";
+export type QuickAddMode = "type" | "speak" | "form";
 
 export interface QuickAddRequest {
   mode?: QuickAddMode;

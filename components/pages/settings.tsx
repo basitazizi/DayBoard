@@ -6,6 +6,7 @@ import { useAssistantStatus } from "@/lib/assistant-client";
 import { supabase } from "@/lib/supabase";
 import { countBackupItems, downloadBackup, readBackup, stageBackup } from "@/lib/backup";
 import { notificationsSupported } from "@/lib/use-reminders";
+import { useSpeech } from "@/lib/use-speech";
 import { isNativeApp, nativeNotificationPermission } from "@/lib/native-reminders";
 import { cn } from "@/lib/cn";
 import { ACCENTS, AVATAR_EMOJIS, BACKDROPS, DEFAULT_WIDGETS, FONTS, GRADIENTS, imageToDataUrl, WIDGETS, type Backdrop, type WidgetSlot } from "@/lib/personalize";
@@ -837,6 +838,8 @@ function GeneralTab() {
   const { store } = useApp();
   const { prefs, setPrefs, resetCustomization } = useTheme();
   const cloudEnabled = useAssistantStatus();
+  // Hidden where voice can't work (the Android app, for now, and browsers without speech recognition).
+  const { supported: canSpeak } = useSpeech();
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmLook, setConfirmLook] = useState(false);
 
@@ -866,9 +869,11 @@ function GeneralTab() {
           <SettingRow first title="Plan study sessions automatically" detail="When an exam is added, set aside time before it">
             <Toggle checked={prefs.autoPlanStudy} onChange={(autoPlanStudy) => setPrefs({ autoPlanStudy })} label="Plan study sessions automatically" />
           </SettingRow>
-          <SettingRow title="Voice input" detail="Add things by speaking, using your browser's speech recognition">
-            <Toggle checked={prefs.voiceInput} onChange={(voiceInput) => setPrefs({ voiceInput })} label="Voice input" />
-          </SettingRow>
+          {canSpeak ? (
+            <SettingRow title="Voice input" detail="Add things by speaking, using your browser's speech recognition">
+              <Toggle checked={prefs.voiceInput} onChange={(voiceInput) => setPrefs({ voiceInput })} label="Voice input" />
+            </SettingRow>
+          ) : null}
           <SettingRow title="Daily focus goal" detail="Used on the dashboard and in Insights">
             <Segmented
               label="Daily focus goal"
@@ -885,7 +890,7 @@ function GeneralTab() {
           <p className="mt-3 text-[13px] leading-relaxed text-ink-2">
             {cloudEnabled
               ? "Scheduling answers and typed adds are worked out on your device. Open questions and photos are sent to the assistant service when you are signed in. Nothing is added without your confirmation."
-              : "Right now the assistant runs entirely on your device: it understands what you type or say and answers from your own data. Photo reading and open questions switch on when the site owner adds an assistant key."}
+              : "Right now the assistant runs entirely on your device: it understands what you type and answers from your own data."}
           </p>
         </Card>
       </div>
