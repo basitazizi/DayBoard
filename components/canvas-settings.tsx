@@ -174,6 +174,7 @@ function CanvasPanel({ onDone }: { onDone: () => void }) {
   const [showOptions, setShowOptions] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [relinking, setRelinking] = useState(false);
+  const [justConnected, setJustConnected] = useState<string | null>(null);
 
   useEffect(() => {
     setSettings(status.settings);
@@ -206,11 +207,11 @@ function CanvasPanel({ onDone }: { onDone: () => void }) {
 
   async function runConnect() {
     const message = await canvas.connect(link, settings, courseMap, preview ?? undefined);
-    showToast(`Canvas connected. ${message}.`);
     setPreview(null);
     setLink("");
     setRelinking(false);
-    onDone();
+    // Stay open on the "manage" view so the student can customise straight away.
+    setJustConnected(message);
   }
 
   /* -------- Step 2: preview and choices -------- */
@@ -317,6 +318,14 @@ function CanvasPanel({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="grid gap-4">
+      {justConnected ? (
+        <Notice tone="green">
+          <div className="font-semibold">You&apos;re connected to Canvas!</div>
+          <div className="mt-0.5 font-normal">
+            {/^everything is up to date$/i.test(justConnected) ? "Nothing new to import right now." : `${justConnected}.`} Make it yours below: pick courses, what to import, default times, study plans and syncing.
+          </div>
+        </Notice>
+      ) : null}
       <div className="rounded-xl border border-line p-3.5 text-sm">
         <div className="flex items-center justify-between gap-3">
           <span className="font-semibold">Your Canvas link</span>
@@ -340,6 +349,7 @@ function CanvasPanel({ onDone }: { onDone: () => void }) {
         </Button>
       )}
 
+      <div className="border-t border-line pt-4 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-3">Customize</div>
       {knownCourses.length ? (
         <section>
           <div className="mb-2 font-semibold">Courses</div>
@@ -383,33 +393,49 @@ function CanvasPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** The Canvas panel, mounted once in the app shell; opened from Settings, More or School. */
+export function CanvasPanelSheet() {
+  const canvas = useCanvas();
+  const status = canvas.status;
+  return (
+    <Sheet open={canvas.panelOpen && Boolean(status)} onClose={canvas.closePanel} title={status?.connected ? "Canvas" : "Connect to Canvas"} description="Works with Canvas" wide>
+      {/* Remounting on open starts each visit fresh (no half-filled link or old preview). */}
+      {status && canvas.panelOpen ? <CanvasPanel onDone={canvas.closePanel} /> : null}
+    </Sheet>
+  );
+}
+
+/** Short status line for a Canvas connection. */
+export function canvasStatusChip(status: ReturnType<typeof useCanvas>["status"]) {
+  if (!status) return null;
+  if (!status.connected) return <Chip>Not connected</Chip>;
+  if (status.lastStatus === "broken") return <Chip tone="rose">Needs a new link</Chip>;
+  if (status.lastStatus === "error") return <Chip tone="amber">Will retry</Chip>;
+  return <Chip tone="green">Connected</Chip>;
+}
+
 /** The Canvas card in Settings: a short summary and one button that opens the panel. */
 export function CanvasImportCard() {
   const { now } = useApp();
   const canvas = useCanvas();
   const status = canvas.status;
-  const [open, setOpen] = useState(false);
+  const { openPanel } = canvas;
 
-  // Opened from elsewhere (e.g. School → Import from Canvas): /settings?tab=general&canvas=1
+  // Opened from a link elsewhere: /settings?tab=general&canvas=1
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("canvas") === "1") setOpen(true);
-  }, []);
+    if (status && new URLSearchParams(window.location.search).get("canvas") === "1") openPanel();
+  }, [status, openPanel]);
 
   const connected = Boolean(status?.connected);
-  const chip = !status ? null : !connected ? <Chip>Not connected</Chip> : status.lastStatus === "broken" ? <Chip tone="rose">Needs a new link</Chip> : status.lastStatus === "error" ? <Chip tone="amber">Will retry</Chip> : <Chip tone="green">Connected</Chip>;
-
   return (
     <Card id="canvas">
-      <CardHeader title="Canvas" action={chip} />
+      <CardHeader title="Canvas" action={canvasStatusChip(status)} />
       <p className="text-sm leading-relaxed text-ink-2">
         {connected ? `Your assignments and exams sync from Canvas. ${timeAgo(status?.lastSyncedAt, now)}.` : "Bring in your Canvas assignments and exams automatically, and keep them up to date."}
       </p>
-      <Button variant={connected ? "secondary" : "primary"} className="mt-3" disabled={!status} onClick={() => setOpen(true)} icon={<Link2 className="h-4 w-4" />}>
+      <Button variant={connected ? "secondary" : "primary"} className="mt-3" disabled={!status} onClick={openPanel} icon={<Link2 className="h-4 w-4" />}>
         {connected ? "Manage Canvas" : "Connect to Canvas"}
       </Button>
-      <Sheet open={open && Boolean(status)} onClose={() => setOpen(false)} title={connected ? "Canvas" : "Connect to Canvas"} description="Works with Canvas" wide>
-        {status ? <CanvasPanel onDone={() => setOpen(false)} /> : null}
-      </Sheet>
     </Card>
   );
 }

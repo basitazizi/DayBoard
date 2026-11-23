@@ -48,6 +48,10 @@ interface GuestConnection {
 interface CanvasValue {
   status: CanvasStatus | null;
   busy: boolean;
+  /** The Canvas panel (connect / manage), shared by Settings, More and School. */
+  panelOpen: boolean;
+  openPanel: () => void;
+  closePanel: () => void;
   preview: (feedUrl: string) => Promise<{ preview?: CanvasPreview; error?: string }>;
   connect: (feedUrl: string, settings: CanvasSettings, courseMap: CourseMap, preview?: CanvasPreview) => Promise<string>;
   syncNow: (options?: { auto?: boolean; force?: boolean }) => Promise<string>;
@@ -277,7 +281,14 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     }
   }, [store, showToast]);
 
-  const value = useMemo(() => ({ status, busy, preview, connect, syncNow, saveSettings, disconnect }), [status, busy, preview, connect, syncNow, saveSettings, disconnect]);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const openPanel = useCallback(() => setPanelOpen(true), []);
+  const closePanel = useCallback(() => setPanelOpen(false), []);
+
+  const value = useMemo(
+    () => ({ status, busy, panelOpen, openPanel, closePanel, preview, connect, syncNow, saveSettings, disconnect }),
+    [status, busy, panelOpen, openPanel, closePanel, preview, connect, syncNow, saveSettings, disconnect]
+  );
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }
 

@@ -14,6 +14,7 @@ import { Page } from "../app-shell";
 import { WorkDetail } from "./tasks";
 import { kindIcon } from "../shared";
 import { CanvasBadge } from "../canvas-ui";
+import { useCanvas } from "../canvas-provider";
 import { ExamEditor } from "../item-editors";
 import { Button, Card, CardHeader, Chip, EmptyState, Field, IconTile, Label, ProgressBar, Row, Segmented, SelectInput, Sheet, TextInput, TONE } from "../ui";
 
@@ -22,6 +23,7 @@ const COLORS: Tone[] = ["teal", "blue", "amber", "rose", "green", "accent"];
 
 export function SchoolPage() {
   const { store, now, openQuickAdd } = useApp();
+  const canvas = useCanvas();
   const data = store.data;
   const today = getLocalDateKey(now, data.timezone);
   const [tab, setTab] = useState<Tab>("overview");
@@ -56,8 +58,8 @@ export function SchoolPage() {
             ]}
           />
           <div className="ml-auto flex flex-wrap items-center gap-2.5">
-            <Button href="/settings?tab=general&canvas=1" icon={<Link2 className="h-4 w-4" />}>
-              Import from Canvas
+            <Button onClick={canvas.openPanel} icon={<Link2 className="h-4 w-4" />}>
+              {canvas.status?.connected ? "Canvas" : "Import from Canvas"}
             </Button>
             <Button variant="primary" onClick={() => openQuickAdd({ mode: "form", kind: tab === "exams" ? "exam" : tab === "assignments" ? "assignment" : "class" })} icon={<Plus className="h-4 w-4" />}>
               {tab === "exams" ? "Exam" : tab === "assignments" ? "Assignment" : "Class"}

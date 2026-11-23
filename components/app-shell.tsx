@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, CheckSquare, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Search, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, CheckSquare, Link2, FileText, GraduationCap, Home, LayoutGrid, Mic, Plus, Search, Settings, Sparkles, Target, Timer, Undo2, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
 import { clearGuestItems, countGuestItems } from "@/lib/local-data";
 import { AppProvider, useApp } from "./app-context";
-import { CanvasProvider } from "./canvas-provider";
+import { CanvasProvider, useCanvas } from "./canvas-provider";
+import { CanvasPanelSheet } from "./canvas-settings";
 import { CommandPalette, openSearch } from "./command-palette";
 import { Avatar } from "./avatar";
 import { LogoMark } from "./logo-mark";
@@ -103,6 +104,7 @@ function Sidebar() {
 function MobileNav() {
   const pathname = usePathname();
   const { openQuickAdd } = useApp();
+  const canvas = useCanvas();
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = [MAIN_NAV[0], MAIN_NAV[1]];
   const secondary = [MAIN_NAV[2]];
@@ -151,6 +153,19 @@ function MobileNav() {
               </Link>
             );
           })}
+          {/* Canvas: opens the connect / manage panel right here. */}
+          <button
+            type="button"
+            onClick={() => {
+              setMoreOpen(false);
+              canvas.openPanel();
+            }}
+            className="relative flex flex-col items-center gap-2 rounded-2xl border border-line px-2 py-4 text-[13px] font-semibold text-ink-2"
+          >
+            {canvas.status?.connected ? <span aria-hidden className={cn("absolute right-3 top-3 h-2 w-2 rounded-full", canvas.status.lastStatus === "broken" ? "bg-rose" : "bg-green")} /> : null}
+            <Link2 className="h-6 w-6" strokeWidth={1.9} />
+            {canvas.status?.connected ? "Canvas" : "Connect Canvas"}
+          </button>
         </div>
       </Sheet>
     </>
@@ -380,6 +395,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ToastView />
         <Confetti />
         <CommandPalette />
+        <CanvasPanelSheet />
       </div>
       </CanvasProvider>
     </AppProvider>
