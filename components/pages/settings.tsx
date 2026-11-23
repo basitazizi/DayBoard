@@ -15,6 +15,7 @@ import { useApp } from "../app-context";
 import { Page } from "../app-shell";
 import { Avatar } from "../avatar";
 import { Button, Card, CardHeader, Chip, Field, IconButton, Label, Notice, Row, Segmented, SelectInput, TextInput, Toggle } from "../ui";
+import { CanvasImportCard } from "../canvas-settings";
 
 type Tab = "profile" | "appearance" | "dashboard" | "general";
 const TABS: Tab[] = ["profile", "appearance", "dashboard", "general"];
@@ -896,6 +897,7 @@ function GeneralTab() {
       </div>
 
       <div className="grid content-start gap-5">
+        <CanvasImportCard />
         <RemindersCard />
         <BackupCard />
 

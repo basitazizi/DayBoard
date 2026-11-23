@@ -26,6 +26,8 @@ export interface WorkItem {
   urgency: Tone;
   score: number;
   reason: string;
+  /** Imported from Canvas. */
+  imported?: boolean;
 }
 
 function assignmentAsTask(assignment: Assignment): Task {
@@ -138,7 +140,8 @@ export function getWorkItems(data: DayBoardData, now = new Date()): WorkItem[] {
       tone: courseTone(data, assignment.courseId, "neutral"),
       urgency: urgencyTone(distance, done),
       score: priority.score + Math.min((assignment.gradeWeight ?? 0) * 2, 40),
-      reason: priority.reason
+      reason: priority.reason,
+      imported: Boolean(assignment.sourceMeta)
     });
   }
 

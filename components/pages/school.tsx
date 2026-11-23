@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { GraduationCap, Plus, School, Sparkles, Trash2 } from "lucide-react";
+import { GraduationCap, Link2, Plus, School, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { getAgenda, timeRangeLabel } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
@@ -13,6 +13,8 @@ import { useApp } from "../app-context";
 import { Page } from "../app-shell";
 import { WorkDetail } from "./tasks";
 import { kindIcon } from "../shared";
+import { CanvasBadge } from "../canvas-ui";
+import { ExamEditor } from "../item-editors";
 import { Button, Card, CardHeader, Chip, EmptyState, Field, IconTile, Label, ProgressBar, Row, Segmented, SelectInput, Sheet, TextInput, TONE } from "../ui";
 
 type Tab = "overview" | "assignments" | "exams";
@@ -54,6 +56,9 @@ export function SchoolPage() {
             ]}
           />
           <div className="ml-auto flex flex-wrap items-center gap-2.5">
+            <Button href="/settings?tab=general&canvas=1" icon={<Link2 className="h-4 w-4" />}>
+              Import from Canvas
+            </Button>
             <Button variant="primary" onClick={() => openQuickAdd({ mode: "form", kind: tab === "exams" ? "exam" : tab === "assignments" ? "assignment" : "class" })} icon={<Plus className="h-4 w-4" />}>
               {tab === "exams" ? "Exam" : tab === "assignments" ? "Assignment" : "Class"}
             </Button>
@@ -225,8 +230,12 @@ function AssignmentList({ items, empty, detailed, onSelect }: { items: Assignmen
         return (
           <Row key={item.id} first={index === 0} className="flex-wrap sm:flex-nowrap">
             <IconTile tone={course?.color ?? "accent"}>{kindIcon("assignment")}</IconTile>
-            <div className="min-w-0 flex-1">
-              <div className={cn("truncate font-semibold", finished && "text-ink-3 line-through")}>{item.title}</div>
+            {/* On phones the title takes the first line and the controls wrap below it. */}
+            <div className="min-w-0 flex-1 basis-[calc(100%-56px)] sm:basis-auto">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className={cn("truncate font-semibold", finished && "text-ink-3 line-through")}>{item.title}</span>
+                <CanvasBadge meta={item.sourceMeta} />
+              </div>
               <div className="truncate text-[13px] text-ink-2">{[course?.name ?? "No class", item.gradeWeight ? `${item.gradeWeight}% of grade` : "", item.estimatedMinutes ? `${item.estimatedMinutes} min` : ""].filter(Boolean).join(" · ")}</div>
             </div>
             {detailed ? (
@@ -266,15 +275,22 @@ function AssignmentList({ items, empty, detailed, onSelect }: { items: Assignmen
 
 function ExamRow({ exam, first, today }: { exam: Exam; first: boolean; today: string }) {
   const { store, showToast } = useApp();
+  const [editing, setEditing] = useState(false);
   const course = store.data.courses.find((entry) => entry.id === exam.courseId);
   const days = getDayDistance(exam.examDate, today);
   return (
     <Row first={first} className="flex-wrap sm:flex-nowrap">
       <IconTile tone="amber">{kindIcon("exam")}</IconTile>
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold">{exam.title}</div>
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Exam details">
+        <ExamEditor exam={exam} onClose={() => setEditing(false)} />
+      </Sheet>
+      <button type="button" onClick={() => setEditing(true)} className="min-w-0 flex-1 basis-[calc(100%-56px)] text-left sm:basis-auto">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-semibold">{exam.title}</span>
+          <CanvasBadge meta={exam.sourceMeta} />
+        </div>
         <div className="truncate text-[13px] text-ink-2">{[course?.name ?? "No class", getRelativeDayLabel(exam.examDate, today), exam.examTime ? formatShortTime(exam.examTime) : "", exam.gradeWeight ? `${exam.gradeWeight}% of grade` : ""].filter(Boolean).join(" · ")}</div>
-      </div>
+      </button>
       <TextInput
         aria-label={`Score for ${exam.title}`}
         type="number"

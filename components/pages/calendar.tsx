@@ -9,6 +9,7 @@ import { addDays, formatMonthYear, formatShortTime, getLocalDateKey, getMonthGri
 import { suggestFreeTime } from "@/lib/planner";
 import type { CalendarEvent, CalendarView, EventCategory } from "@/types/dayboard";
 import { useApp } from "../app-context";
+import { CanvasActions, CanvasBadge, CanvasNotices } from "../canvas-ui";
 import { Page } from "../app-shell";
 import { AgendaRow, FreeTimeCard } from "../shared";
 import { Button, Card, Chip, EmptyState, Field, IconButton, Label, Segmented, SelectInput, Sheet, TextInput, TONE } from "../ui";
@@ -232,6 +233,13 @@ function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => v
         {event.autoPlanned ? (
           <div className="sm:col-span-2">
             <Chip tone="accent">Planned for you by DayBoard</Chip>
+          </div>
+        ) : null}
+        {event.sourceMeta ? (
+          <div className="grid gap-2 sm:col-span-2">
+            <CanvasBadge meta={event.sourceMeta} className="justify-self-start" />
+            <CanvasNotices kind="event" id={event.id} meta={event.sourceMeta} />
+            <CanvasActions kind="event" id={event.id} meta={event.sourceMeta} onHidden={onClose} />
           </div>
         ) : null}
         <Field label="Title" className="sm:col-span-2">

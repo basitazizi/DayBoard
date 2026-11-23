@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "How DayBoard handles your information."
 };
 
-const UPDATED = "November 21, 2026";
+const UPDATED = "November 23, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -67,6 +67,15 @@ export default function PrivacyPage() {
               <strong>Your browser&apos;s speech recognition</strong> turns speech into text when you use voice input. Depending on your browser, the audio may be processed by its maker, such as Google or Apple. DayBoard never records or stores audio.
             </li>
           </ul>
+        </Section>
+
+        <Section title="Importing from Canvas">
+          <p>
+            If you choose to connect Canvas, you paste your Canvas Calendar Feed link into DayBoard. DayBoard then reads that calendar to import <strong>assignment and exam titles, due dates and times, the class name, a link back to Canvas</strong> and, if you leave it on, a short note from each description. Nothing else is imported: no grades, rubrics, submissions or files.
+          </p>
+          <p>
+            The link works like a password, so it is stored securely: if you have an account it&apos;s kept on our server and never shown again; without an account it stays on your device. DayBoard only uses it to read your calendar, on demand and about once a day. You can remove it any time from Settings → Import from Canvas → Disconnect, and choose whether to keep or remove what was imported.
+          </p>
         </Section>
 
         <Section title="Notifications">

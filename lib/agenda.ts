@@ -19,6 +19,8 @@ export interface AgendaItem {
   tone: Tone;
   done: boolean;
   planned: boolean;
+  /** Imported from Canvas. */
+  imported?: boolean;
   courseId?: string;
   linkedTaskId?: string;
 }
@@ -128,7 +130,7 @@ export function getAgenda(data: DayBoardData, dateKey: string): AgendaItem[] {
       detail: event.location || event.description || "",
       tone: linkedTask?.courseId ? courseTone(data, linkedTask.courseId, CATEGORY_TONE[event.category]) : CATEGORY_TONE[event.category],
       done: false,
-      planned: Boolean(event.autoPlanned),
+      planned: Boolean(event.autoPlanned), imported: Boolean(event.sourceMeta),
       linkedTaskId: event.linkedTaskId
     });
   }
@@ -165,7 +167,7 @@ export function getAgenda(data: DayBoardData, dateKey: string): AgendaItem[] {
       detail: courseOf(data, exam.courseId)?.name ?? "Exam",
       tone: "amber",
       done: exam.score !== undefined,
-      planned: false,
+      planned: false, imported: Boolean(exam.sourceMeta),
       courseId: exam.courseId || undefined
     });
   }
@@ -199,7 +201,7 @@ export function getAgenda(data: DayBoardData, dateKey: string): AgendaItem[] {
       detail: courseOf(data, assignment.courseId)?.name ?? "Assignment",
       tone: courseTone(data, assignment.courseId, "accent"),
       done: assignment.status === "submitted" || assignment.status === "graded",
-      planned: false,
+      planned: false, imported: Boolean(assignment.sourceMeta),
       courseId: assignment.courseId || undefined
     });
   }

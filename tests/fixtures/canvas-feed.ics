@@ -1,0 +1,81 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Instructure//Canvas//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Sample Student Calendar (Canvas)
+X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1001
+DTSTART:20261125T075900Z
+DTEND:20261125T075900Z
+SUMMARY:Lab 4 report: titration [CHEM 201-01 General Chemistry (Fall 2026)]
+DESCRIPTION:<p>Write up your titration results\, including error analysis\;
+  use the lab template.</p><p>Submit as PDF.</p>
+URL;VALUE=URI:https://school.instructure.com/courses/11/assignments/1001
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1002
+DTSTART;VALUE=DATE:20261127
+DTEND;VALUE=DATE:20261128
+SUMMARY:Chapter 5 Quiz [CHEM 201-01 General Chemistry (Fall 2026)]
+DESCRIPTION:
+URL;VALUE=URI:https://school.instructure.com/courses/11/assignments/1002
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1003
+DTSTART;TZID=America/New_York:20261203T100000
+DTEND;TZID=America/New_York:20261203T120000
+SUMMARY:Midterm Exam [BIO 110 Intro to Biology]
+DESCRIPTION:Covers chapters 1–6. Bring a calculator &amp\; a pencil.
+URL;VALUE=URI:https://school.instructure.com/courses/22/assignments/1003
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This alarm must be ignored
+TRIGGER:-PT15M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1004
+DTSTART:20261212T075900Z
+SUMMARY:Final Project [ENG 220 English Literature]
+DESCRIPTION:Final project proposal and presentation.
+URL;VALUE=URI:https://school.instructure.com/courses/33/assignments/1004
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-calendar-event-55
+DTSTART:20261124T220000Z
+DTEND:20261124T230000Z
+SUMMARY:Office hours [BIO 110 Intro to Biology]
+DESCRIPTION:Room 204
+URL;VALUE=URI:https://school.instructure.com/calendar?event_id=55
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1005
+DTSTART:20261001T065900Z
+SUMMARY:Essay 1 [ENG 220 English Literature]
+URL;VALUE=URI:https://school.instructure.com/courses/33/assignments/1005
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1006
+DTSTART:20261130T235900
+SUMMARY:Problem Set 7\, part A\; graphs
+DESCRIPTION:See Canvas
+URL;VALUE=URI:https://school.instructure.com/courses/44/assignments/1006
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261120T120000Z
+UID:event-assignment-1007
+DTSTART:20261126T075900Z
+SUMMARY:Final Exam Practice Quiz [CHEM 201-01 General Chemistry (Fall 2026)]
+DESCRIPTION:
+URL;VALUE=URI:https://school.instructure.com/courses/11/assignments/1007
+END:VEVENT
+END:VCALENDAR

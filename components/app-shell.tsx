@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { getFocusRemaining, useActiveFocusSession } from "@/lib/focus-session";
 import { clearGuestItems, countGuestItems } from "@/lib/local-data";
 import { AppProvider, useApp } from "./app-context";
+import { CanvasProvider } from "./canvas-provider";
 import { CommandPalette, openSearch } from "./command-palette";
 import { Avatar } from "./avatar";
 import { LogoMark } from "./logo-mark";
@@ -370,6 +371,7 @@ function PageSkeleton() {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppProvider>
+      <CanvasProvider>
       <div data-app-shell className="flex min-h-dvh text-ink">
         <Sidebar />
         <div className="flex min-h-dvh min-w-0 flex-1 flex-col pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
@@ -379,6 +381,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Confetti />
         <CommandPalette />
       </div>
+      </CanvasProvider>
     </AppProvider>
   );
 }

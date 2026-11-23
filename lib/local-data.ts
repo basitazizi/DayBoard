@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Assignment, CalendarEvent, Course, DayBoardData, Exam, Habit, HabitLog, Note, Task, TaskStep, Tone } from "@/types/dayboard";
+import type { Assignment, CalendarEvent, Course, DayBoardData, Exam, Habit, HabitLog, Note, SourceMeta, Task } from "@/types/dayboard";
+import { ASSIGNMENT_FIELD_MAP, EVENT_FIELD_MAP, EXAM_FIELD_MAP, editedFieldsFor, metaToRow, withEdited } from "./canvas/rows";
+import { applyPlanToData, type SyncPlan } from "./canvas/sync";
+import type { CanvasSettings } from "./canvas/settings";
+import { courseTimeLabel, isUuid, mapAssignment, mapCourse, mapEvent, mapExam, mapTask, oneOf, TONES, type Row } from "./db-rows";
 import { formatTime, getLocalDateKey, localTimezone } from "./date-utils";
 import { seedData } from "./seed-data";
 import { calculateHabitStreak, calculateHabitWeekPattern } from "./streaks";
@@ -11,142 +15,17 @@ export const DAYBOARD_AUTH_CHANGED_EVENT = "dayboard:auth-changed";
 export const GUEST_DATA_KEY = "dayboard:guest-data:v2";
 
 /** Columns added by the DayBoard 2.0 migration. Writes retry without them if the migration has not been run yet. */
+const SOURCE_COLS = ["source", "external_id", "external_url", "source_hash", "edited_fields", "removed_from_source", "hidden", "source_date_changed"];
 const OPTIONAL_COLUMNS: Record<string, string[]> = {
   tasks: ["steps", "course_id"],
-  events: ["auto_planned"],
+  events: ["auto_planned", ...SOURCE_COLS],
   courses: ["color"],
-  assignments: ["score"],
-  exams: ["score"]
+  assignments: ["score", "notes", ...SOURCE_COLS],
+  exams: ["score", "notes", "plan_study", "study_planned_for", ...SOURCE_COLS]
 };
 
-type Row = Record<string, any>;
-
-const TONES: Tone[] = ["teal", "blue", "amber", "rose", "green", "accent"];
-
-function timeValue(value: string | null | undefined) {
-  return value?.slice(0, 5) ?? "";
-}
-
-function isUuid(value?: string | null) {
-  return Boolean(value?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i));
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return allowed.includes(value as T) ? (value as T) : fallback;
-}
-
-const PRIORITIES = ["low", "medium", "high", "critical"] as const;
-const TASK_STATUSES = ["not_started", "in_progress", "paused", "completed", "overdue", "cancelled"] as const;
-const EVENT_CATEGORIES = ["school", "work", "personal", "gym", "study", "appointment", "deadline", "social", "other"] as const;
-const ASSIGNMENT_TYPES = ["homework", "quiz", "project", "lab", "paper", "midterm", "final", "other"] as const;
-const ASSIGNMENT_STATUSES = ["not_started", "in_progress", "submitted", "graded"] as const;
 const HABIT_ICONS = ["dumbbell", "book", "droplet", "leaf", "target"] as const;
 const HABIT_SCHEDULES = ["daily", "scheduled", "weekly"] as const;
-const REPEAT_TYPES = ["never", "daily", "weekdays", "weekly", "biweekly", "monthly", "custom"] as const;
-
-function parseSteps(value: unknown): TaskStep[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((step) => step && typeof step.title === "string")
-    .map((step, index) => ({
-      id: typeof step.id === "string" ? step.id : `step-${index}`,
-      title: String(step.title).slice(0, 200),
-      done: Boolean(step.done),
-      minutes: typeof step.minutes === "number" ? step.minutes : undefined
-    }));
-}
-
-function mapTask(row: Row): Task {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description ?? "",
-    dueDate: row.due_date ?? undefined,
-    dueTime: row.due_time ? timeValue(row.due_time) : undefined,
-    priority: oneOf(row.priority, PRIORITIES, "medium"),
-    status: oneOf(row.status, TASK_STATUSES, "not_started"),
-    estimatedMinutes: row.estimated_minutes ?? 0,
-    actualMinutes: 0,
-    category: row.category ?? "Personal",
-    progressPercent: row.progress_percent ?? 0,
-    autoRollover: row.auto_rollover ?? true,
-    steps: parseSteps(row.steps),
-    courseId: row.course_id ?? undefined,
-    createdAt: row.created_at,
-    completedAt: row.completed_at ?? undefined
-  };
-}
-
-function mapEvent(row: Row): CalendarEvent {
-  return {
-    id: row.id,
-    title: row.title,
-    date: row.event_date,
-    startTime: row.start_time ? timeValue(row.start_time) : "09:00",
-    endTime: row.end_time ? timeValue(row.end_time) : "10:00",
-    allDay: row.all_day ?? false,
-    category: oneOf(row.category, EVENT_CATEGORIES, "other"),
-    location: row.location ?? undefined,
-    description: row.description ?? undefined,
-    priority: oneOf(row.priority, PRIORITIES, "medium"),
-    linkedTaskId: row.linked_task_id ?? undefined,
-    autoPlanned: row.auto_planned ?? false,
-    repeatType: oneOf(row.repeat_type, REPEAT_TYPES, "never"),
-    repeatDays: row.repeat_days ?? undefined
-  };
-}
-
-function courseTimeLabel(startTime?: string | null, endTime?: string | null) {
-  if (!startTime || !endTime) return "To be announced";
-  return `${formatTime(timeValue(startTime))}-${formatTime(timeValue(endTime))}`;
-}
-
-function mapCourse(row: Row, index = 0): Course {
-  return {
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    days: row.days ?? "To be announced",
-    time: courseTimeLabel(row.start_time, row.end_time),
-    room: row.room ?? "TBA",
-    startTime: row.start_time ? timeValue(row.start_time) : undefined,
-    endTime: row.end_time ? timeValue(row.end_time) : undefined,
-    color: oneOf(row.color, TONES, TONES[index % TONES.length])
-  };
-}
-
-function mapAssignment(row: Row): Assignment {
-  return {
-    id: row.id,
-    courseId: row.course_id ?? "",
-    title: row.title,
-    assignmentType: oneOf(row.assignment_type, ASSIGNMENT_TYPES, "homework"),
-    dueDate: row.due_date ?? "",
-    dueTime: row.due_time ? timeValue(row.due_time) : "",
-    estimatedMinutes: row.estimated_minutes ?? 0,
-    actualMinutes: row.actual_minutes ?? 0,
-    gradeWeight: row.grade_weight ?? undefined,
-    difficulty: row.difficulty ?? 3,
-    steps: parseSteps(row.steps),
-    score: typeof row.score === "number" ? row.score : row.score != null ? Number(row.score) : undefined,
-    status: oneOf(row.status, ASSIGNMENT_STATUSES, "not_started")
-  };
-}
-
-function mapExam(row: Row): Exam {
-  return {
-    id: row.id,
-    courseId: row.course_id ?? "",
-    title: row.title,
-    examDate: row.exam_date,
-    examTime: row.exam_time ? timeValue(row.exam_time) : "",
-    gradeWeight: row.grade_weight ?? undefined,
-    studyMinutesGoal: row.study_minutes_goal ?? 0,
-    studyMinutesCompleted: row.study_minutes_completed ?? 0,
-    importanceScore: row.importance_score ?? 0,
-    score: row.score != null ? Number(row.score) : undefined
-  };
-}
 
 function mapHabit(row: Row): Habit {
   return {
@@ -216,11 +95,40 @@ function eventToDb(event: Partial<CalendarEvent>, linkedTaskId?: string | null):
     linked_task_id: isUuid(linkedTaskId) ? linkedTaskId : null,
     auto_planned: event.autoPlanned ?? false,
     priority: event.priority,
-    status: "upcoming"
+    status: "upcoming",
+    ...(event.sourceMeta ? metaToRow(event.sourceMeta) : {})
   };
 }
 
-function finalize(data: DayBoardData): DayBoardData {
+/** Fields an edit changed, compared with the item before the edit (for imported items). */
+function changedKeys<T extends object>(before: T, after: Partial<T>): Partial<T> {
+  const diff: Partial<T> = {};
+  for (const key of Object.keys(after) as (keyof T)[]) if (after[key] !== before[key]) diff[key] = after[key];
+  return diff;
+}
+
+/** All assignments/exams/events, hidden ones included (what Canvas sync works with). */
+export function withHiddenImports<T extends DayBoardData>(data: T): T {
+  const hidden = data.hiddenImports;
+  if (!hidden) return data;
+  return { ...data, assignments: [...data.assignments, ...hidden.assignments], exams: [...data.exams, ...hidden.exams], events: [...data.events, ...hidden.events], hiddenImports: undefined };
+}
+
+/** Moves hidden imported items out of the visible lists. */
+function partitionHidden(data: DayBoardData): DayBoardData {
+  const all = withHiddenImports(data);
+  const isHidden = (item: { sourceMeta?: SourceMeta }) => item.sourceMeta?.hidden === true;
+  return {
+    ...all,
+    assignments: all.assignments.filter((item) => !isHidden(item)),
+    exams: all.exams.filter((item) => !isHidden(item)),
+    events: all.events.filter((item) => !isHidden(item)),
+    hiddenImports: { assignments: all.assignments.filter(isHidden), exams: all.exams.filter(isHidden), events: all.events.filter(isHidden) }
+  };
+}
+
+function finalize(input: DayBoardData): DayBoardData {
+  const data = partitionHidden(input);
   const today = getLocalDateKey(new Date(), data.timezone);
   const habits = data.habits.map((habit) => ({
     ...habit,
@@ -548,8 +456,12 @@ export function useDayBoardData() {
         return optimistic.id;
       },
       updateEvent: (eventId: string, event: Omit<CalendarEvent, "id">) => {
-        mutate((current) => ({ ...current, events: current.events.map((item) => (item.id === eventId ? { ...event, id: eventId } : item)) }));
-        void (async () => remoteUpdate("events", eventId, eventToDb(event, await resolveId(event.linkedTaskId))))();
+        // Imported from Canvas: remember which fields the student changed, so sync leaves them alone.
+        const before = dataRef.current.events.find((item) => item.id === eventId);
+        const next: Omit<CalendarEvent, "id"> =
+          before?.sourceMeta && event.sourceMeta === before.sourceMeta ? { ...event, sourceMeta: withEdited(before.sourceMeta, editedFieldsFor(changedKeys(before, event), EVENT_FIELD_MAP)) } : event;
+        mutate((current) => ({ ...current, events: current.events.map((item) => (item.id === eventId ? { ...next, id: eventId } : item)) }));
+        void (async () => remoteUpdate("events", eventId, eventToDb(next, await resolveId(next.linkedTaskId))))();
       },
       deleteEvent: (eventId: string) => {
         mutate((current) => ({ ...current, events: current.events.filter((event) => event.id !== eventId) }));
@@ -637,23 +549,42 @@ export function useDayBoardData() {
               grade_weight: assignment.gradeWeight ?? null,
               difficulty: assignment.difficulty,
               steps: assignment.steps ?? [],
-              status: "not_started"
+              status: "not_started",
+              ...(assignment.notes ? { notes: assignment.notes } : {}),
+              ...(assignment.sourceMeta ? metaToRow(assignment.sourceMeta) : {})
             },
             (row) => mutate((current) => ({ ...current, assignments: swap(current.assignments, optimistic.id, mapAssignment(row)) }))
           );
         })();
         return optimistic.id;
       },
-      updateAssignment: (assignmentId: string, patch: Partial<Pick<Assignment, "status" | "score" | "title" | "dueDate" | "dueTime" | "steps">>) => {
-        mutate((current) => ({ ...current, assignments: current.assignments.map((item) => (item.id === assignmentId ? { ...item, ...patch } : item)) }));
+      updateAssignment: (
+        assignmentId: string,
+        patch: Partial<Pick<Assignment, "status" | "score" | "title" | "dueDate" | "dueTime" | "steps" | "courseId" | "assignmentType" | "estimatedMinutes" | "notes" | "sourceMeta">>
+      ) => {
+        const before = dataRef.current.assignments.find((item) => item.id === assignmentId);
+        const next = { ...patch };
+        // Imported from Canvas: an edit to a synced field means sync must leave that field alone from now on.
+        if (before?.sourceMeta && !("sourceMeta" in patch)) {
+          const meta = withEdited(before.sourceMeta, editedFieldsFor(changedKeys(before, patch), ASSIGNMENT_FIELD_MAP));
+          if (meta !== before.sourceMeta) next.sourceMeta = meta;
+        }
+        mutate((current) => ({ ...current, assignments: current.assignments.map((item) => (item.id === assignmentId ? { ...item, ...next } : item)) }));
         const payload: Row = {};
-        if ("status" in patch) payload.status = patch.status;
-        if ("score" in patch) payload.score = patch.score ?? null;
-        if ("title" in patch) payload.title = patch.title;
-        if ("dueDate" in patch) payload.due_date = patch.dueDate || null;
-        if ("dueTime" in patch) payload.due_time = patch.dueTime || null;
-        if ("steps" in patch) payload.steps = patch.steps ?? [];
-        void remoteUpdate("assignments", assignmentId, payload);
+        if ("status" in next) payload.status = next.status;
+        if ("score" in next) payload.score = next.score ?? null;
+        if ("title" in next) payload.title = next.title;
+        if ("dueDate" in next) payload.due_date = next.dueDate || null;
+        if ("dueTime" in next) payload.due_time = next.dueTime || null;
+        if ("steps" in next) payload.steps = next.steps ?? [];
+        if ("assignmentType" in next) payload.assignment_type = next.assignmentType;
+        if ("estimatedMinutes" in next) payload.estimated_minutes = next.estimatedMinutes;
+        if ("notes" in next) payload.notes = next.notes || null;
+        if ("sourceMeta" in next) Object.assign(payload, metaToRow(next.sourceMeta));
+        void (async () => {
+          if ("courseId" in next) payload.course_id = (await resolveId(next.courseId)) ?? null;
+          await remoteUpdate("assignments", assignmentId, payload);
+        })();
       },
       deleteAssignment: (assignmentId: string) => {
         mutate((current) => ({ ...current, assignments: current.assignments.filter((item) => item.id !== assignmentId) }));
@@ -677,21 +608,42 @@ export function useDayBoardData() {
               grade_weight: exam.gradeWeight ?? null,
               study_minutes_goal: exam.studyMinutesGoal,
               study_minutes_completed: 0,
-              importance_score: importanceScore
+              importance_score: importanceScore,
+              ...(exam.notes ? { notes: exam.notes } : {}),
+              ...(exam.planStudy !== undefined ? { plan_study: exam.planStudy } : {}),
+              ...(exam.studyPlannedFor ? { study_planned_for: exam.studyPlannedFor } : {}),
+              ...(exam.sourceMeta ? metaToRow(exam.sourceMeta) : {})
             },
             (row) => mutate((current) => ({ ...current, exams: swap(current.exams, optimistic.id, mapExam(row)) }))
           );
         })();
         return optimistic.id;
       },
-      updateExam: (examId: string, patch: Partial<Pick<Exam, "score" | "title" | "examDate" | "examTime">>) => {
-        mutate((current) => ({ ...current, exams: current.exams.map((item) => (item.id === examId ? { ...item, ...patch } : item)) }));
+      updateExam: (
+        examId: string,
+        patch: Partial<Pick<Exam, "score" | "title" | "examDate" | "examTime" | "courseId" | "notes" | "studyMinutesGoal" | "planStudy" | "studyPlannedFor" | "sourceMeta">>
+      ) => {
+        const before = dataRef.current.exams.find((item) => item.id === examId);
+        const next = { ...patch };
+        if (before?.sourceMeta && !("sourceMeta" in patch)) {
+          const meta = withEdited(before.sourceMeta, editedFieldsFor(changedKeys(before, patch), EXAM_FIELD_MAP));
+          if (meta !== before.sourceMeta) next.sourceMeta = meta;
+        }
+        mutate((current) => ({ ...current, exams: current.exams.map((item) => (item.id === examId ? { ...item, ...next } : item)) }));
         const payload: Row = {};
-        if ("score" in patch) payload.score = patch.score ?? null;
-        if ("title" in patch) payload.title = patch.title;
-        if ("examDate" in patch) payload.exam_date = patch.examDate;
-        if ("examTime" in patch) payload.exam_time = patch.examTime || null;
-        void remoteUpdate("exams", examId, payload);
+        if ("score" in next) payload.score = next.score ?? null;
+        if ("title" in next) payload.title = next.title;
+        if ("examDate" in next) payload.exam_date = next.examDate;
+        if ("examTime" in next) payload.exam_time = next.examTime || null;
+        if ("notes" in next) payload.notes = next.notes || null;
+        if ("studyMinutesGoal" in next) payload.study_minutes_goal = next.studyMinutesGoal;
+        if ("planStudy" in next) payload.plan_study = next.planStudy ?? true;
+        if ("studyPlannedFor" in next) payload.study_planned_for = next.studyPlannedFor || null;
+        if ("sourceMeta" in next) Object.assign(payload, metaToRow(next.sourceMeta));
+        void (async () => {
+          if ("courseId" in next) payload.course_id = (await resolveId(next.courseId)) ?? null;
+          await remoteUpdate("exams", examId, payload);
+        })();
       },
       deleteExam: (examId: string) => {
         mutate((current) => ({ ...current, exams: current.exams.filter((item) => item.id !== examId) }));
@@ -758,6 +710,45 @@ export function useDayBoardData() {
       deleteNote: (noteId: string) => {
         mutate((current) => ({ ...current, notes: current.notes.filter((note) => note.id !== noteId) }));
         void remoteDelete("notes", noteId);
+      },
+
+      /** Guest mode: apply a Canvas sync plan to the data on this device. (Signed in, the server applies it.) */
+      applyCanvasPlan: (plan: SyncPlan, settings: CanvasSettings) => {
+        if (userIdRef.current) return;
+        mutate((current) => applyPlanToData(withHiddenImports(current), plan, settings, (prefix) => `${prefix}-${crypto.randomUUID()}`));
+      },
+      /** Hide an imported item everywhere (it stays hidden on future syncs), or bring it back. */
+      setImportHidden: (kind: "assignment" | "exam" | "event", id: string, hidden: boolean) => {
+        const all = withHiddenImports(dataRef.current);
+        const list = kind === "assignment" ? all.assignments : kind === "exam" ? all.exams : all.events;
+        const item = list.find((entry) => entry.id === id);
+        if (!item?.sourceMeta) return;
+        const sourceMeta: SourceMeta = { ...item.sourceMeta, hidden };
+        const swapMeta = <I extends { id: string; sourceMeta?: SourceMeta }>(items: I[]) => items.map((entry) => (entry.id === id ? { ...entry, sourceMeta } : entry));
+        mutate((current) => {
+          const merged = withHiddenImports(current);
+          if (kind === "assignment") return { ...merged, assignments: swapMeta(merged.assignments) };
+          if (kind === "exam") return { ...merged, exams: swapMeta(merged.exams) };
+          return { ...merged, events: swapMeta(merged.events) };
+        });
+        void remoteUpdate(kind === "assignment" ? "assignments" : kind === "exam" ? "exams" : "events", id, { hidden });
+      },
+
+      /** Turn an assignment into an exam (keeps its Canvas link, notes and class). */
+      convertAssignmentToExam: (assignmentId: string) => {
+        const item = dataRef.current.assignments.find((entry) => entry.id === assignmentId);
+        if (!item) return null;
+        const meta: SourceMeta | undefined = item.sourceMeta && { ...item.sourceMeta, editedFields: [...item.sourceMeta.editedFields] };
+        api.deleteAssignment(assignmentId);
+        return api.addExam({ courseId: item.courseId, title: item.title, examDate: item.dueDate, examTime: item.dueTime, gradeWeight: item.gradeWeight, studyMinutesGoal: Math.max(item.estimatedMinutes, 120), notes: item.notes, planStudy: true, sourceMeta: meta });
+      },
+      /** Turn an exam into an assignment. */
+      convertExamToAssignment: (examId: string) => {
+        const item = dataRef.current.exams.find((entry) => entry.id === examId);
+        if (!item) return null;
+        const meta: SourceMeta | undefined = item.sourceMeta && { ...item.sourceMeta, editedFields: [...item.sourceMeta.editedFields] };
+        api.deleteExam(examId);
+        return api.addAssignment({ courseId: item.courseId, title: item.title, assignmentType: "homework", dueDate: item.examDate, dueTime: item.examTime, estimatedMinutes: 60, gradeWeight: item.gradeWeight, difficulty: 3, notes: item.notes, sourceMeta: meta });
       },
 
       resetData: () => {

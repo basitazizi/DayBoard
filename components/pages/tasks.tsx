@@ -11,6 +11,8 @@ import type { Assignment, TaskStep } from "@/types/dayboard";
 import { useApp } from "../app-context";
 import { Page } from "../app-shell";
 import { toggleWork } from "../shared";
+import { CanvasBadge } from "../canvas-ui";
+import { AssignmentEditor } from "../item-editors";
 import { Button, Card, Checkbox, Chip, EmptyState, Field, Label, ProgressBar, Segmented, SelectInput, Sheet, TextInput, TONE } from "../ui";
 
 type Filter = "all" | "today" | "upcoming" | "progress" | "done";
@@ -150,7 +152,10 @@ function WorkRow({ item, selected, onSelect }: { item: WorkItem; selected: boole
     <div className={cn("flex items-center gap-3 rounded-[14px] border px-3 py-3", selected ? "border-accent-line bg-accent-soft/50" : "border-transparent hover:bg-surface-2")}>
       <Checkbox checked={item.done} onChange={() => toggleWork(store, item, celebrate)} label={`Mark ${item.title} done`} />
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
-        <span className={cn("block truncate font-semibold", item.done && "text-ink-3 line-through")}>{item.title}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={cn("truncate font-semibold", item.done && "text-ink-3 line-through")}>{item.title}</span>
+          <CanvasBadge show={item.imported} />
+        </span>
         {showBar ? (
           <span className="mt-1.5 flex items-center gap-2">
             <ProgressBar value={item.progress} tone={item.urgency === "neutral" ? "accent" : item.urgency} className="w-28 sm:w-36" />
@@ -218,9 +223,10 @@ export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () 
   return (
     <div className="grid gap-4">
       <div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Chip tone={item.tone}>{item.courseLabel}</Chip>
           <Chip>{item.kind === "task" ? "Task" : "Assignment"}</Chip>
+          <CanvasBadge meta={assignment?.sourceMeta} />
         </div>
         <h2 className="mb-1 mt-2.5 text-[22px] font-bold leading-tight tracking-[-0.02em]">{item.title}</h2>
         <p className="text-[13px] text-ink-2">
@@ -310,6 +316,8 @@ export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () 
         </>
       ) : null}
 
+      {assignment ? <AssignmentEditor assignment={assignment} onConverted={onDeleted} /> : null}
+
       {assignment ? (
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status">
@@ -332,9 +340,6 @@ export function WorkDetail({ item, onDeleted }: { item: WorkItem; onDeleted: () 
                 store.updateAssignment(assignment.id, score === undefined ? { score } : { score, status: "graded" });
               }}
             />
-          </Field>
-          <Field label="Due date" className="col-span-2">
-            <TextInput type="date" value={assignment.dueDate} onChange={(event) => store.updateAssignment(assignment.id, { dueDate: event.target.value })} />
           </Field>
         </div>
       ) : null}

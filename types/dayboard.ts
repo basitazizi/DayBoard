@@ -64,6 +64,7 @@ export interface CalendarEvent {
   autoPlanned?: boolean;
   repeatType?: "never" | "daily" | "weekdays" | "weekly" | "biweekly" | "monthly" | "custom";
   repeatDays?: number[];
+  sourceMeta?: SourceMeta;
 }
 
 export interface UpcomingItem {
@@ -104,6 +105,21 @@ export interface Note {
   updatedAt: string;
 }
 
+/** Fields the student can change on an imported item; once changed, Canvas sync leaves them alone. */
+export type SyncedField = "title" | "dueDate" | "dueTime" | "courseId" | "assignmentType" | "estimatedMinutes" | "notes" | "endTime";
+
+/** Where an imported item came from. Absent on items the student added by hand. */
+export interface SourceMeta {
+  source: "canvas";
+  externalId: string;
+  externalUrl?: string;
+  hash?: string;
+  editedFields: SyncedField[];
+  removedFromSource: boolean;
+  hidden: boolean;
+  dateChanged: boolean;
+}
+
 export interface Course {
   id: string;
   code: string;
@@ -130,6 +146,8 @@ export interface Assignment {
   difficulty: number;
   score?: number;
   status: "not_started" | "in_progress" | "submitted" | "graded";
+  notes?: string;
+  sourceMeta?: SourceMeta;
 }
 
 export interface Exam {
@@ -143,6 +161,12 @@ export interface Exam {
   studyMinutesCompleted: number;
   importanceScore: number;
   score?: number;
+  notes?: string;
+  /** Plan study sessions before it automatically. */
+  planStudy?: boolean;
+  /** The exam date the current study plan was made for; a different date means it needs (re)planning. */
+  studyPlannedFor?: string;
+  sourceMeta?: SourceMeta;
 }
 
 export interface DayBoardData {
@@ -157,6 +181,8 @@ export interface DayBoardData {
   assignments: Assignment[];
   exams: Exam[];
   habitLogs: HabitLog[];
+  /** Imported items the student hid. Kept out of every list, but remembered so sync doesn't bring them back. */
+  hiddenImports?: { assignments: Assignment[]; exams: Exam[]; events: CalendarEvent[] };
 }
 
 export interface PriorityResult {

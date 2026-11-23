@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:flows": "node scripts/verify-flows.cjs"
+    "test:flows": "node scripts/verify-flows.cjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -31,6 +32,7 @@
     "@types/react-dom": "latest",
     "playwright": "^1.62.1",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^3.2.7"
   }
 }

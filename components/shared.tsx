@@ -9,6 +9,7 @@ import type { DayBoardStore } from "@/lib/local-data";
 import type { FreeTimeSuggestion } from "@/lib/planner";
 import type { WorkItem } from "@/lib/work";
 import { useApp } from "./app-context";
+import { CanvasBadge } from "./canvas-ui";
 import { Button, Card, Checkbox, Chip, Stripe } from "./ui";
 
 export const KIND_LABEL: Record<AgendaKind, string> = { event: "Event", class: "Class", study: "Study", task: "Task", assignment: "Assignment", exam: "Exam" };
@@ -60,7 +61,10 @@ export function AgendaRow({ item, first, onOpen, compact }: { item: AgendaItem; 
       </div>
       <Stripe tone={item.tone} />
       <button type="button" onClick={onOpen} disabled={!onOpen} className="min-w-0 flex-1 text-left disabled:cursor-default">
-        <span className={cn("block truncate font-semibold", item.done && "text-ink-3 line-through")}>{item.title}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={cn("truncate font-semibold", item.done && "text-ink-3 line-through")}>{item.title}</span>
+          <CanvasBadge show={item.imported} />
+        </span>
         <span className="block truncate text-[13px] text-ink-2">{[item.start !== undefined && item.end !== undefined ? timeRangeLabel(item) : "", item.detail].filter(Boolean).join(" · ")}</span>
       </button>
       {item.planned ? (
