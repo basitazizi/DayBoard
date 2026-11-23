@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { DayBoardData } from "@/types/dayboard";
 import { getAgenda, timeRangeLabel } from "./agenda";
 import { getLocalDateKey, nowMinutes } from "./date-utils";
+import { isNativeApp, syncNativeReminders } from "./native-reminders";
 
 const SENT_KEY = "dayboard:reminders-sent";
 
@@ -29,15 +30,28 @@ export function notificationsSupported() {
 }
 
 /**
- * Reminds the person shortly before things start or are due, while DayBoard is open in a tab or installed app.
- * Uses a system notification when allowed, and the in-app toast otherwise.
+ * Reminds the person shortly before things start or are due.
+ * In the Android app, reminders are scheduled with the phone and arrive even when DayBoard is closed.
+ * On the website, they fire while DayBoard is open: a system notification when allowed, the in-app toast otherwise.
  */
 export function useReminders(data: DayBoardData, options: { enabled: boolean; leadMinutes: number; hydrated: boolean; toast: (message: string) => void }) {
   const latest = useRef({ data, ...options });
   latest.current = { data, ...options };
 
+  // Android app: hand upcoming reminders to the phone so they arrive even when DayBoard is closed.
   useEffect(() => {
-    if (!options.enabled || !options.hydrated) return;
+    if (!options.hydrated || !isNativeApp()) return;
+    const timer = window.setTimeout(() => {
+      syncNativeReminders(data, { enabled: options.enabled, leadMinutes: options.leadMinutes }).catch(() => {
+        // Scheduling failed (e.g. permission revoked); the next change tries again.
+      });
+    }, 1_000);
+    return () => window.clearTimeout(timer);
+  }, [data, options.enabled, options.leadMinutes, options.hydrated]);
+
+  // Website: check while the page is open.
+  useEffect(() => {
+    if (!options.enabled || !options.hydrated || isNativeApp()) return;
 
     function check() {
       const { data: current, leadMinutes, toast } = latest.current;

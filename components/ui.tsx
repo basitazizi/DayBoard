@@ -51,10 +51,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ variant = "secondary", size = "md", href, full, icon, className, children, type, ...props }: ButtonProps) {
   const classes = cn(
-    "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-semibold transition-colors disabled:opacity-45",
+    "inline-flex items-center justify-center whitespace-nowrap font-semibold transition-colors disabled:opacity-45",
     BUTTON_VARIANT[variant],
     BUTTON_SIZE[size],
-    full && "w-full",
+    // A full-width button next to another (e.g. "Save" + "Delete") must give up room, or it pushes its neighbour off screen.
+    full ? "w-full" : "shrink-0",
     className
   );
   const content = (

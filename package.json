@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/local-notifications": "^8.3.1",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/postcss": "latest",
@@ -22,6 +25,7 @@
     "tailwind-merge": "latest"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

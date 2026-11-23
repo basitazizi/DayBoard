@@ -6,6 +6,7 @@ import { useAssistantStatus } from "@/lib/assistant-client";
 import { supabase } from "@/lib/supabase";
 import { countBackupItems, downloadBackup, readBackup, stageBackup } from "@/lib/backup";
 import { notificationsSupported } from "@/lib/use-reminders";
+import { isNativeApp, nativeNotificationPermission } from "@/lib/native-reminders";
 import { cn } from "@/lib/cn";
 import { ACCENTS, AVATAR_EMOJIS, BACKDROPS, DEFAULT_WIDGETS, FONTS, GRADIENTS, imageToDataUrl, WIDGETS, type Backdrop, type WidgetSlot } from "@/lib/personalize";
 import { useTheme, type Density, type TextSize, type ThemeMode } from "@/lib/theme";
@@ -382,7 +383,7 @@ function DeleteAccountCard() {
       return;
     }
     try {
-      for (const key of ["dayboard:guest-data:v2", "dayboard:prefs", "dayboard:profile", "dayboard:wallpaper", "dayboard:focus-history", "dayboard-focus-session", "dayboard:reminders-sent"]) localStorage.removeItem(key);
+      for (const key of ["dayboard:guest-data:v2", "dayboard:prefs", "dayboard:profile", "dayboard:wallpaper", "dayboard:focus-history", "dayboard-focus-session", "dayboard:reminders-sent", "dayboard:native-reminders"]) localStorage.removeItem(key);
     } catch {
       // Nothing stored.
     }
@@ -711,13 +712,22 @@ function DashboardTab() {
 function RemindersCard() {
   const { prefs, setPrefs } = useTheme();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [native, setNative] = useState(false);
 
   useEffect(() => {
+    if (isNativeApp()) {
+      setNative(true);
+      void nativeNotificationPermission(false).then((status) => setPermission(status === "prompt" ? "default" : status));
+      return;
+    }
     setPermission(notificationsSupported() ? Notification.permission : "unsupported");
   }, []);
 
   async function toggle(on: boolean) {
-    if (on && notificationsSupported() && Notification.permission === "default") {
+    if (on && native) {
+      const status = await nativeNotificationPermission(true);
+      setPermission(status === "prompt" ? "default" : status);
+    } else if (on && notificationsSupported() && Notification.permission === "default") {
       setPermission(await Notification.requestPermission());
     }
     setPrefs({ reminders: on });
@@ -744,7 +754,11 @@ function RemindersCard() {
       </SettingRow>
       {prefs.reminders ? (
         <p className="mt-3 text-[13px] leading-relaxed text-ink-2">
-          {permission === "granted"
+          {native
+            ? permission === "granted"
+              ? "You'll get a notification on this phone, even when DayBoard is closed."
+              : "Notifications are off for DayBoard. Turn them on in your phone's Settings → Apps → DayBoard → Notifications."
+            : permission === "granted"
             ? "You'll get a notification while DayBoard is open in a tab or installed as an app."
             : permission === "denied"
               ? "Notifications are blocked for this site, so reminders appear inside DayBoard instead. You can allow notifications in your browser's site settings."

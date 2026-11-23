@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DayBoard</string>
+    <string name="title_activity_main">DayBoard</string>
+    <string name="package_name">dev.dayboard.app</string>
+    <string name="custom_url_scheme">dev.dayboard.app</string>
+</resources>
