@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, CalendarDays, Eye, EyeOff, Plus, Sparkles } from "lucide-react";
 import { LogoMark } from "./logo-mark";
 import { useSupabaseAuth } from "@/lib/auth";
+import { markWelcomed } from "@/lib/app-entry";
 import { localTimezone } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase";
 import { Button, Field, Notice, Segmented, TextInput } from "./ui";
@@ -25,8 +26,16 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!auth.loading && auth.user) router.replace("/");
+    if (!auth.loading && auth.user) {
+      markWelcomed();
+      router.replace("/");
+    }
   }, [auth.loading, auth.user, router]);
+
+  // Opened from the Welcome screen's "Create an account" button: start on Sign up.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("mode") === "signup") setMode("signup");
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -86,7 +95,7 @@ export function LoginPage() {
 
         <section className="flex items-center justify-center px-5 py-10">
           <div className="w-full max-w-md">
-            <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-ink-2 hover:text-ink">
+            <Link href="/" onClick={markWelcomed} className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-ink-2 hover:text-ink">
               <ArrowLeft className="h-4 w-4" />
               Continue without an account
             </Link>

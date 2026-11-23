@@ -255,6 +255,306 @@
 }
 
 /* ------------------------------------------------------------------
+   Android app launch intro (see components/launch-intro.tsx).
+   Hidden unless the <head> script marks this launch with data-launch.
+   ------------------------------------------------------------------ */
+.launch-intro {
+  display: none;
+}
+
+[data-launch] .launch-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #0d0d0f;
+  animation: db-intro-out 420ms ease-in 1150ms forwards;
+}
+
+.launch-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.launch-logo {
+  width: 112px;
+  height: 112px;
+  overflow: visible;
+}
+
+.launch-row {
+  fill: #fff;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: db-intro-row 360ms cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+}
+
+.launch-arc {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: db-intro-draw 520ms cubic-bezier(0.6, 0, 0.2, 1) 380ms forwards;
+}
+
+.launch-name {
+  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  animation: db-pop 360ms ease-out 760ms forwards;
+}
+
+@keyframes db-intro-row {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes db-intro-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes db-intro-out {
+  to { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+
+/* ------------------------------------------------------------------
+   First-run onboarding (components/welcome-page.tsx). Always dark, so it
+   continues the splash screen and launch intro.
+   ------------------------------------------------------------------ */
+.ob-root {
+  background: #0b0b0f;
+  color-scheme: dark;
+}
+
+.ob-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ob-blob {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.32;
+  animation: ob-drift 18s ease-in-out infinite alternate;
+}
+.ob-blob-1 { background: #ffffff; top: -30vmax; left: -25vmax; opacity: 0.1; }
+.ob-blob-2 { background: #9a9aa3; bottom: -35vmax; right: -30vmax; animation-delay: -6s; opacity: 0.12; }
+.ob-blob-3 { background: #ffffff; top: 30%; left: 40%; width: 40vmax; height: 40vmax; animation-delay: -12s; opacity: 0.05; }
+
+@keyframes ob-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6vmax, 4vmax, 0) scale(1.15); }
+}
+
+.ob-track {
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.ob-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ob-glass {
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.06);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.ob-hero-card {
+  border-radius: 20px;
+  background: linear-gradient(135deg, #3a3a42, #1d1d23 60%, #121216);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  box-shadow: 0 20px 50px -18px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.1);
+}
+
+.ob-cta {
+  background: #fff;
+  color: #0b0b0f;
+  box-shadow: 0 12px 36px -10px rgb(255 255 255 / 0.3);
+  transition: transform 120ms ease;
+}
+.ob-cta:active { transform: scale(0.98); }
+
+.ob-logo-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: 136px;
+  border-radius: 36px;
+  background: linear-gradient(160deg, #1c1c24, #0d0d12);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+
+.ob-halo {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.16), transparent 65%);
+  animation: ob-breathe 3.2s ease-in-out infinite;
+}
+.ob-halo-strong { width: 280px; height: 280px; background: radial-gradient(circle, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.06) 45%, transparent 70%); }
+
+.ob-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+.ob-ring-1 { width: 220px; height: 220px; animation: ob-spin 24s linear infinite; border-top-color: rgb(255 255 255 / 0.7); }
+.ob-ring-2 { width: 300px; height: 300px; animation: ob-spin 36s linear infinite reverse; border-bottom-color: rgb(255 255 255 / 0.4); }
+
+@keyframes ob-spin { to { transform: rotate(360deg); } }
+@keyframes ob-breathe { 50% { transform: scale(1.12); opacity: 0.75; } }
+
+.ob-chip {
+  position: absolute;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+.ob-chip-a { background: rgb(255 255 255 / 0.12); color: #ffffff; }
+.ob-chip-b { background: rgb(255 255 255 / 0.05); color: #c9c9cf; }
+
+.ob-float-in {
+  opacity: 0;
+  animation: ob-float-in 600ms cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards, ob-bob 4s ease-in-out 900ms infinite;
+}
+@keyframes ob-float-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ob-bob { 50% { translate: 0 -6px; } }
+
+.ob-pop {
+  opacity: 0;
+  animation: ob-pop 600ms cubic-bezier(0.2, 0.9, 0.3, 1.25) forwards;
+}
+@keyframes ob-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+.ob-rise {
+  opacity: 0;
+  animation: db-pop 520ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.ob-drop {
+  opacity: 0;
+  animation: ob-drop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+@keyframes ob-drop {
+  from { opacity: 0; transform: translateY(-14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.ob-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -0.18em;
+  background: #ffffff;
+  animation: ob-blink 1s steps(1) infinite;
+}
+@keyframes ob-blink { 50% { opacity: 0; } }
+
+.ob-slide-in {
+  opacity: 0;
+  animation: ob-slide-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes ob-slide-in {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+.ob-progress {
+  width: 0;
+  animation: ob-fill 2.4s cubic-bezier(0.3, 0, 0.2, 1) 400ms forwards;
+}
+@keyframes ob-fill { to { width: 72%; } }
+
+.ob-notify {
+  opacity: 0;
+  animation: ob-notify 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 150ms forwards;
+}
+@keyframes ob-notify {
+  from { opacity: 0; transform: translateY(-60px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+
+.ob-ring-bell { animation: ob-shake 900ms ease-in-out 800ms 2; transform-origin: top center; }
+@keyframes ob-shake {
+  20% { transform: rotate(18deg); }
+  40% { transform: rotate(-16deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-6deg); }
+}
+
+.ob-focus-ring {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: ob-focus 2.2s cubic-bezier(0.4, 0, 0.2, 1) 600ms forwards;
+}
+@keyframes ob-focus { to { stroke-dashoffset: 30; } }
+
+.ob-flame { animation: ob-breathe 1.8s ease-in-out infinite; }
+
+.ob-orbit {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  animation: ob-spin 10s linear infinite;
+}
+.ob-orbit-dot {
+  position: absolute;
+  top: -18px;
+  left: calc(50% - 18px);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: #fff;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(8px);
+  animation: ob-spin 10s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-blob, .ob-ring-1, .ob-ring-2, .ob-halo, .ob-orbit, .ob-orbit-dot, .ob-flame, .ob-ring-bell, .ob-caret {
+    animation: none;
+  }
+  .ob-float-in, .ob-pop, .ob-rise, .ob-drop, .ob-slide-in, .ob-notify {
+    opacity: 1;
+    animation: none;
+  }
+  .ob-progress { width: 72%; animation: none; }
+  .ob-focus-ring { stroke-dashoffset: 30; animation: none; }
+}
+
+/* ------------------------------------------------------------------
    Personalisation that cannot be expressed as tokens.
    These rules sit outside the cascade layers on purpose so they win
    over utility classes.

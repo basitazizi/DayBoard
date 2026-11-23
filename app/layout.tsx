@@ -4,6 +4,8 @@ import "./globals.css";
 import { ServiceWorker } from "@/components/service-worker";
 import { ThemeProvider } from "@/lib/theme";
 import { SITE_URL } from "@/lib/site";
+import { appEntryScript } from "@/lib/app-entry";
+import { LaunchIntro } from "@/components/launch-intro";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito", display: "swap", preload: false });
@@ -31,8 +33,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${inter.variable} ${nunito.variable} ${lora.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: appEntryScript }} />
       </head>
       <body>
+        <LaunchIntro />
         <ThemeProvider>{children}</ThemeProvider>
         <ServiceWorker />
       </body>

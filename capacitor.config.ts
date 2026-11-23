@@ -11,6 +11,8 @@ const devUrl = process.env.CAP_SERVER_URL;
 const config: CapacitorConfig = {
   appId: "dev.dayboard.app",
   appName: "DayBoard",
+  // Lets the site recognise the app before any script runs (launch intro, Welcome screen). See lib/app-entry.ts.
+  appendUserAgent: "DayBoardApp",
   // Bundled files: only the offline page shown when dayboard.dev can't load.
   webDir: "capacitor-www",
   server: {
@@ -20,7 +22,8 @@ const config: CapacitorConfig = {
     errorPath: "index.html"
   },
   android: {
-    backgroundColor: "#f4f3ee"
+    // Dark while the page loads, so the splash screen flows straight into the launch intro.
+    backgroundColor: "#0d0d0f"
   },
   plugins: {
     SystemBars: {
