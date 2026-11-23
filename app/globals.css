@@ -215,6 +215,12 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Keeps content below the phone's status bar (clock, signal, battery) in the Android app and installed PWAs.
+   It is 0 in a normal browser tab, so the website is unchanged. */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-box-orient: vertical;

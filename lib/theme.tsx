@@ -75,6 +75,20 @@ function applyTheme(theme: DayBoardTheme) {
   document.documentElement.style.colorScheme = theme === "night" ? "dark" : "light";
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "night" ? "#0f1116" : "#f4f3ee");
   store(THEME_KEY, theme);
+  void matchSystemBars(theme);
+}
+
+/** Android app: dark status-bar icons on the light theme, light icons on the dark theme. */
+async function matchSystemBars(theme: DayBoardTheme) {
+  const scope = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
+  if (!scope.Capacitor?.isNativePlatform?.()) return;
+  try {
+    const { SystemBars, SystemBarsStyle } = await import("@capacitor/core");
+    // "Light" means a light background, so the icons are drawn dark.
+    await SystemBars.setStyle({ style: theme === "night" ? SystemBarsStyle.Dark : SystemBarsStyle.Light });
+  } catch {
+    // Older app builds without SystemBars: leave the bar as it is.
+  }
 }
 
 const CUSTOM_ACCENT_VARS = ["--accent", "--accent-strong", "--accent-soft", "--accent-line", "--on-accent", "--hero-from", "--hero-to"];
@@ -128,6 +142,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const columnsReady = useRef(true);
   const saveTimer = useRef<number | undefined>(undefined);
   const latest = useRef({ prefs: DEFAULT_PREFS, profile: DEFAULT_PROFILE });
+  /**
+   * Guards against the account "echoing" an older save back over a newer local change.
+   * `dirty`: a local change hasn't been saved yet, so anything arriving from the account is out of date.
+   * `lastWrite`: the timestamp of this device's newest save; account updates at or before it are our own echoes.
+   */
+  const dirty = useRef(false);
+  const lastWrite = useRef("");
+  const changeCount = useRef(0);
+
+  function stampWrite() {
+    const now = new Date().toISOString();
+    lastWrite.current = now;
+    return now;
+  }
 
   function adoptPrefs(next: Prefs) {
     latest.current.prefs = next;
@@ -145,13 +173,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   /** Saves personalisation to the account a moment after the last change. */
   function queueSync() {
     if (!userIdRef.current || !columnsReady.current) return;
+    dirty.current = true;
+    changeCount.current += 1;
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(async () => {
       const id = userIdRef.current;
       if (!id) return;
+      const generation = changeCount.current;
       const { error } = await supabase
         .from("user_settings")
-        .upsert({ user_id: id, prefs: latest.current.prefs, profile: latest.current.profile, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+        .upsert({ user_id: id, prefs: latest.current.prefs, profile: latest.current.profile, updated_at: stampWrite() }, { onConflict: "user_id" });
+      // A change made while this save was in flight keeps the flag set until its own save finishes.
+      if (changeCount.current === generation) dirty.current = false;
       if (error) {
         columnsReady.current = false;
         setSyncing(false);
@@ -196,6 +229,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setSyncing(true);
       }
       const settings = result.data as { theme?: string; prefs?: unknown; profile?: unknown } | null;
+      // Something was changed on this device while the account was loading: keep it, and save it.
+      if (dirty.current || lastWrite.current) {
+        queueSync();
+        return;
+      }
       if ((settings?.theme === "day" || settings?.theme === "night") && localStorage.getItem(MODE_KEY) !== "auto") {
         setThemeState(settings.theme);
         setModeState(settings.theme);
@@ -268,7 +306,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const channel = supabase
       .channel(`dayboard-theme-${userId}-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_settings", filter: `user_id=eq.${userId}` }, (payload) => {
-        const row = payload.new as { theme?: string; prefs?: unknown; profile?: unknown };
+        const row = payload.new as { theme?: string; prefs?: unknown; profile?: unknown; updated_at?: string };
+        // Ignore our own saves coming back, older saves arriving late, and anything while a local change is unsaved:
+        // applying them would undo what the person just did.
+        if (dirty.current) return;
+        if (row.updated_at && lastWrite.current && new Date(row.updated_at).getTime() <= new Date(lastWrite.current).getTime()) return;
         if ((row.theme === "day" || row.theme === "night") && localStorage.getItem(MODE_KEY) !== "auto") {
           setThemeState(row.theme);
           setModeState(row.theme);
@@ -290,7 +332,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(resolved);
     store(MODE_KEY, next);
     if (!userId || next === "auto") return;
-    void supabase.from("user_settings").upsert({ user_id: userId, theme: resolved, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    void supabase.from("user_settings").upsert({ user_id: userId, theme: resolved, updated_at: stampWrite() }, { onConflict: "user_id" });
   }
 
   function setPrefs(patch: Partial<Prefs>) {

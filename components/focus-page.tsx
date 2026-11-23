@@ -367,7 +367,7 @@ export function FocusPage() {
     const date = new Intl.DateTimeFormat(undefined, { timeZone: store.data.timezone, weekday: "long", month: "short", day: "numeric" }).format(now);
 
     return createPortal(
-      <section aria-label="Focus session" className="fixed inset-0 z-[60] grid h-dvh grid-rows-[auto_1fr_auto] overflow-y-auto bg-bg px-5 py-5 text-ink sm:px-10 sm:py-8">
+      <section aria-label="Focus session" className="fixed inset-0 z-[60] grid h-dvh grid-rows-[auto_1fr_auto] overflow-y-auto bg-bg px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))] text-ink sm:px-10 sm:pb-8 sm:pt-[calc(2rem+env(safe-area-inset-top))]">
         <header className="flex items-start justify-between gap-4 text-sm text-ink-2">
           <div><div className="font-medium">{date}</div><div className="mt-1 tabular-nums">{clock}</div></div>
           <div className="text-right"><div className="font-medium text-accent">{stateLabel}</div><div className="mt-1 text-xs">Round {session.session_number} of {session.total_rounds ?? 4}</div></div>

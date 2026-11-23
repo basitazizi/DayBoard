@@ -61,7 +61,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-bg text-ink">
+    <main className="safe-top min-h-dvh bg-bg text-ink">
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[0.95fr_1.05fr]">
         <section className="hero-gradient m-4 hidden flex-col rounded-[28px] p-10 text-white lg:flex">
           <div className="flex items-center gap-3 text-2xl font-bold tracking-[-0.02em]">

@@ -16,16 +16,19 @@ const DAYS_AHEAD = 7;
 const MAX_SCHEDULED = 64;
 
 type Plugin = typeof import("@capacitor/local-notifications").LocalNotifications;
-let pluginPromise: Promise<Plugin | null> | null = null;
+// Wrapped in an object on purpose: a Capacitor plugin is a proxy that answers to any method name,
+// including `then`, so returning it bare from an async function makes JavaScript treat it as a promise and fail.
+let pluginPromise: Promise<{ plugin: Plugin } | null> | null = null;
 
 /** The native plugin, or null on the website. Loaded lazily so it never runs during server rendering. */
-function nativePlugin(): Promise<Plugin | null> {
+/** Never `await` or return the plugin itself from an async function; unwrap `.plugin` where it is used. */
+function nativePlugin(): Promise<{ plugin: Plugin } | null> {
   pluginPromise ??= (async () => {
     if (typeof window === "undefined") return null;
     const { Capacitor } = await import("@capacitor/core");
     if (!Capacitor.isNativePlatform()) return null;
     const { LocalNotifications } = await import("@capacitor/local-notifications");
-    return LocalNotifications;
+    return { plugin: LocalNotifications };
   })().catch(() => null);
   return pluginPromise;
 }
@@ -40,7 +43,7 @@ export function isNativeApp() {
 export type NativePermission = "granted" | "denied" | "prompt";
 
 export async function nativeNotificationPermission(request: boolean): Promise<NativePermission> {
-  const plugin = await nativePlugin();
+  const plugin = (await nativePlugin())?.plugin;
   if (!plugin) return "denied";
   const status = request ? await plugin.requestPermissions() : await plugin.checkPermissions();
   return status.display === "granted" ? "granted" : status.display === "denied" ? "denied" : "prompt";
@@ -81,7 +84,7 @@ function idFor(key: string) {
 
 /** Replaces everything scheduled with the reminders for the coming days. Pass enabled=false to clear them. */
 export async function syncNativeReminders(data: DayBoardData, options: { enabled: boolean; leadMinutes: number }) {
-  const plugin = await nativePlugin();
+  const plugin = (await nativePlugin())?.plugin;
   if (!plugin) return;
 
   const pending = await plugin.getPending();
@@ -126,6 +129,9 @@ export async function syncNativeReminders(data: DayBoardData, options: { enabled
         title: item.start !== undefined ? `${item.title} starts ${timing}` : `${item.title} is due ${timing}`,
         body: [timeRangeLabel(item), item.detail].filter(Boolean).join(" · "),
         schedule: { at: new Date(fireAt), allowWhileIdle: true },
+        // Exact alarms would make Android open its "Alarms & reminders" settings screen on every save.
+        // A reminder arriving a minute or two late is fine for "starts in 10 min".
+        isExactNotification: false,
         smallIcon: "ic_stat_dayboard",
         iconColor: "#0d0d0f"
       });

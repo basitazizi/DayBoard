@@ -159,7 +159,7 @@ function ToastView() {
   const { toast, dismissToast } = useApp();
   if (!toast) return null;
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 lg:bottom-8">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 lg:bottom-8">
       <div key={toast.id} className="animate-pop pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl bg-ink py-2.5 pl-4 pr-2.5 text-sm font-medium text-bg shadow-pop">
         <span className="min-w-0 flex-1">{toast.message}</span>
         {toast.undo ? (
@@ -316,7 +316,7 @@ export function Page({ title, subtitle, toolbar, children, fill }: { title: stri
   const pathname = usePathname();
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 bg-bg/90 px-4 backdrop-blur sm:px-6 lg:h-20 lg:px-8">
+      <header className="safe-top sticky top-0 z-30 box-content flex h-16 shrink-0 items-center gap-3 bg-bg/90 px-4 backdrop-blur sm:px-6 lg:h-20 lg:px-8">
         <div className="min-w-0">
           <h1 className="truncate text-[22px] font-bold leading-tight tracking-[-0.02em] lg:text-2xl">{title}</h1>
           {subtitle ? <p className="truncate text-[13px] text-ink-3">{subtitle}</p> : null}
@@ -370,7 +370,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <AppProvider>
       <div data-app-shell className="flex min-h-dvh text-ink">
         <Sidebar />
-        <div className="flex min-h-dvh min-w-0 flex-1 flex-col pb-[76px] lg:pb-0">{children}</div>
+        <div className="flex min-h-dvh min-w-0 flex-1 flex-col pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
         <MobileNav />
         <QuickAdd />
         <ToastView />
